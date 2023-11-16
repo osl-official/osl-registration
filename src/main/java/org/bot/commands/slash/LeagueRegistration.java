@@ -1,0 +1,147 @@
+package org.bot.commands.slash;
+
+import lombok.extern.slf4j.Slf4j;
+import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.api.interactions.commands.OptionMapping;
+import net.dv8tion.jda.api.interactions.commands.OptionType;
+import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
+import net.dv8tion.jda.api.interactions.components.text.TextInput;
+import net.dv8tion.jda.api.interactions.components.text.TextInputStyle;
+import net.dv8tion.jda.api.interactions.modals.Modal;
+import org.bot.converters.Database;
+import org.bot.scripts.CommandLogger;
+import org.bot.scripts.ReplyEphemeral;
+
+import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+@Slf4j
+public class LeagueRegistration extends ListenerAdapter {
+    private final int MESSAGE_TIMEOUT = 10;
+    private final Database DATABASE = new Database();
+    private ReplyEphemeral replyEphemeral;
+
+    @Override
+    public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
+        String name = event.getName();
+
+        CommandLogger commandLogger = new CommandLogger();
+        replyEphemeral = new ReplyEphemeral(event);
+
+        int interval = 5;
+        TimeUnit timeUnit = TimeUnit.MINUTES;
+
+        if (commandLogger.usedCommandWithinTimeFrame(event, interval, timeUnit)) {
+            replyEphemeral.sendThenDelete("Command Cool Down! Please wait " + interval + " " + timeUnit +
+                            " before using that command again",
+                    MESSAGE_TIMEOUT, TimeUnit.SECONDS);
+        }
+
+        commandLogger.recordCommand(event);
+
+        switch (name.toLowerCase()) {
+            case "register-fa" -> registerFreeAgentEvent(event);
+            case "register-team" -> registerTeamEvent(event);
+        }
+    }
+
+    private void registerFreeAgentEvent(SlashCommandInteractionEvent event) {
+        try {
+            if (DATABASE.isFreeAgent(event.getUser().getIdLong())) {
+                replyEphemeral.sendThenDelete(
+                        "You are already a Free Agent contact a **League Coordinator** if you believe this to be wrong",
+                        MESSAGE_TIMEOUT, TimeUnit.SECONDS
+                );
+                return;
+            }
+            if (DATABASE.isInTeam(event.getUser().getIdLong())) {
+                replyEphemeral.sendThenDelete(
+                        "You can't be a Free Agent while in a League Team, contact a **League Coordinator** if you believe this to be wrong",
+                        MESSAGE_TIMEOUT, TimeUnit.SECONDS
+                );
+                return;
+            }
+        } catch (SQLException e) {
+            log.error(e.getLocalizedMessage());
+        }
+
+        TextInput confirm = TextInput.create("confirm", "Confirmation", TextInputStyle.SHORT)
+                .setRequired(true)
+                .setPlaceholder("Type `confirm` if you have read and agree to #rules")
+                .build();
+
+        Modal modal = Modal.create("confirm-fa", "Confirm Free Agent Registration")
+                .addActionRow(confirm)
+                .build();
+
+        event.replyModal(modal).queue();
+    }
+
+    private void registerTeamEvent(SlashCommandInteractionEvent event) {
+        replyEphemeral = new ReplyEphemeral(event);
+        List<OptionMapping> players = event.getOptionsByType(OptionType.USER);
+        for (OptionMapping player:players) {
+            if (player.getAsUser().isBot()) {
+                replyEphemeral.sendThenDelete(
+                        "Players must not be a Bot",
+                        MESSAGE_TIMEOUT, TimeUnit.SECONDS
+                );
+                return;
+            }
+            if (players.stream().filter(p->p.getAsUser().equals(player.getAsUser())).count() > 1) {
+                replyEphemeral.sendThenDelete(
+                        "Do not repeat players",
+                        MESSAGE_TIMEOUT, TimeUnit.SECONDS
+                );
+                return;
+            }
+            if (players.stream().filter(p->p.getAsUser().equals(event.getUser())).count() > 1) {
+                replyEphemeral.sendThenDelete(
+                        "Do not include yourself as a player, you are automatically included",
+                        MESSAGE_TIMEOUT, TimeUnit.SECONDS
+                );
+                return;
+            }
+        }
+
+        List<HashMap<String, String>> teams;
+        try {
+            teams = new Database().getTeamsNotTaken();
+
+            StringSelectMenu.Builder teamsSelectMenu = StringSelectMenu.create("choose-team")
+                    .addOption("Create New Team", "new");
+
+            for (HashMap<String, String> team: teams) {
+                teamsSelectMenu.addOption(team.get("teamName"), team.get("teamID").toLowerCase());
+            }
+
+            replyEphemeral.sendEmbedThenDelete(new EmbedBuilder()
+                            .setTitle("Select Team you wish to form")
+                            .addField("Team", getTeamsMessage(event.getUser(), event.getOptionsByType(OptionType.USER)), true)
+                            .setFooter("This message will be deleted after 5 minutes if there is no team selected.")
+                            .build(),
+                    5, TimeUnit.MINUTES, teamsSelectMenu.build()
+            );
+        } catch (SQLException e) {
+            log.error(e.getLocalizedMessage());
+        }
+    }
+
+    private String getTeamsMessage(User captain, List<OptionMapping> players) {
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append("Captain: ")
+                .append(captain.getAsMention())
+                .append("\nPlayers: ");
+        for (OptionMapping player: players) {
+            stringBuilder.append(player.getAsUser().getAsMention())
+                    .append(" ");
+        }
+
+        return stringBuilder.toString();
+    }
+}
