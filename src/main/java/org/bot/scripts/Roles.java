@@ -8,6 +8,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
 
 @AllArgsConstructor
 public class Roles {
@@ -17,14 +18,19 @@ public class Roles {
         Role role = getRole(roleName);
 
         if (role != null) {
-            guild.addRoleToMember(user, role).queue();
+            guild.addRoleToMember(user, role).submit();
         } else {
+            System.out.println("New Role -> " + roleName);
             guild.createRole().setName(roleName)
                     .setMentionable(true)
                     .setHoisted(true)
                     .submit()
                     .thenCompose((r -> guild.addRoleToMember(user, r).submit()));
         }
+    }
+
+    public void giveRole(@NotNull User user, Role role) {
+        guild.addRoleToMember(user, role).submit();
     }
 
     public void giveRole(@NotNull Long discordID,@NotNull String roleName) {
@@ -47,7 +53,21 @@ public class Roles {
     }
 
     public void giveRoleToMultiple(@NotNull List<String> discordIDs,@NotNull String roleName) {
-        discordIDs.forEach(discordID -> giveRole(Objects.requireNonNull(this.guild.getMemberById(discordID)).getUser(), roleName));
+        Role role = null;
+
+        try {
+            if (!roleExist(roleName)) {
+                role = createRole(roleName);
+            } else {
+                role = guild.getRolesByName(roleName, true).get(0);
+            }
+
+            for (String discordID: discordIDs) {
+                giveRole(guild.getMemberById(discordID).getUser(), role);
+            }
+        } catch (ExecutionException | InterruptedException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public boolean roleExist(@NotNull String roleName) {
@@ -62,6 +82,13 @@ public class Roles {
                 .findFirst();
 
         return roleOptional.orElse(null);
+    }
+
+    public Role createRole(String roleName) throws ExecutionException, InterruptedException {
+        return guild.createRole().setName(roleName)
+                .setMentionable(true)
+                .setHoisted(true)
+                .submit().get();
     }
 
     public MessageEmbed.Field getTeamRoleField(String teamName) {

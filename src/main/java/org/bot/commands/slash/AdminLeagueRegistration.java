@@ -4,7 +4,6 @@ import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
-import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import org.bot.converters.Config;
 import org.bot.converters.Database;
 import org.bot.models.Player;
@@ -15,6 +14,7 @@ import org.bot.scripts.Roles;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -22,8 +22,8 @@ import java.util.concurrent.TimeUnit;
 public class AdminLeagueRegistration {
     private final Database database = new Database();
     private final Config config = new Config();
-    private ReplyEphemeral replyEphemeral;
-    private SlashCommandInteractionEvent event;
+    private final ReplyEphemeral replyEphemeral;
+    private final SlashCommandInteractionEvent event;
 
     public AdminLeagueRegistration(SlashCommandInteractionEvent event) {
         this.replyEphemeral = new ReplyEphemeral(event);
@@ -31,13 +31,8 @@ public class AdminLeagueRegistration {
     }
 
     public void removeFreeAgent() {
-        User freeAgent = event.getOption("freeagent").getAsUser();
+        User freeAgent = Objects.requireNonNull(event.getOption("freeagent")).getAsUser();
         try {
-            if (freeAgent.isBot()) {
-                replyEphemeral.sendThenDelete("Bot cannot be registered as a Free Agent",
-                        10, TimeUnit.SECONDS);
-                return;
-            }
             if (!database.isFreeAgent(freeAgent.getIdLong())) {
                 replyEphemeral.sendThenDelete("User is not a Free Agent",
                         10, TimeUnit.SECONDS);
@@ -57,7 +52,7 @@ public class AdminLeagueRegistration {
     }
 
     public void addFreeAgent() {
-        User freeAgent = event.getOption("freeagent").getAsUser();
+        User freeAgent = Objects.requireNonNull(event.getOption("freeagent")).getAsUser();
         try {
             if (freeAgent.isBot()) {
                 replyEphemeral.sendThenDelete("Bot cannot be registered as a Free Agent",
@@ -80,7 +75,7 @@ public class AdminLeagueRegistration {
     }
 
     public void disbandTeam() {
-        Role role = event.getOption("teamrole").getAsRole();
+        Role role = Objects.requireNonNull(event.getOption("teamrole")).getAsRole();
         try {
             List<HashMap<String, String>> teamsTaken = database.getTeamsTaken();
             Optional<HashMap<String, String>> teamRole = teamsTaken.stream().filter(teamTaken -> teamTaken.containsValue(role.getName().split("\\|")[0].trim()))
@@ -110,8 +105,8 @@ public class AdminLeagueRegistration {
     }
 
     public void createTeam() {
-        String teamName = event.getOption("teamname").getAsString();
-        String teamID = event.getOption("teamid").getAsString();
+        String teamName = Objects.requireNonNull(event.getOption("teamname")).getAsString();
+        String teamID = Objects.requireNonNull(event.getOption("teamid")).getAsString();
 
         try {
             if (database.doesTeamIdExist(teamID)) {

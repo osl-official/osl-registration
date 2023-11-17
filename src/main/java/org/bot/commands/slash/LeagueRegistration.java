@@ -66,8 +66,23 @@ public class LeagueRegistration {
     }
 
     public void registerTeamEvent() {
+        Database database = new Database();
         replyEphemeral = new ReplyEphemeral(event);
         List<OptionMapping> players = event.getOptionsByType(OptionType.USER);
+        StringBuilder sb = new StringBuilder();
+
+        try {
+            if (database.isInTeam(event.getUser().getIdLong())) {
+                replyEphemeral.sendThenDelete(
+                        "You are already in a team.",
+                        MESSAGE_TIMEOUT, TimeUnit.SECONDS
+                );
+                return;
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
         for (OptionMapping player:players) {
             if (player.getAsUser().isBot()) {
                 replyEphemeral.sendThenDelete(
@@ -90,11 +105,25 @@ public class LeagueRegistration {
                 );
                 return;
             }
+
+            try {
+                if (database.isInTeam(player.getAsUser().getIdLong())) {
+                    sb.append(player.getAsUser().getAsMention()).append(System.lineSeparator());
+                }
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        if (!sb.toString().isBlank()) {
+            replyEphemeral.sendThenDelete("Team cannot be made. The following Players are already in a team:\n" +
+                    sb.toString(), 30, TimeUnit.SECONDS);
+            return;
         }
 
         List<HashMap<String, String>> teams;
         try {
-            teams = new Database().getTeamsNotTaken();
+            teams = database.getTeamsNotTaken();
 
             StringSelectMenu.Builder teamsSelectMenu = StringSelectMenu.create("choose-team")
                     .addOption("Create New Team", "new");

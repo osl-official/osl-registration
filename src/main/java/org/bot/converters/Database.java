@@ -169,6 +169,22 @@ public class Database {
         connection.close();
     }
 
+    public void addCaptain(long discordID, String teamID) throws SQLException {
+        if (getPlayer(discordID).isNull()) {
+            addPlayer(discordID);
+        }
+
+        Connection connection = DriverManager.getConnection(DATABASE_URL);
+        PreparedStatement preparedStatement = connection.prepareStatement(
+                "UPDATE Teams SET captainID = ? WHERE teamID = " +  toSqlString(teamID.toUpperCase()));
+        preparedStatement.setLong(1, discordID);
+
+        preparedStatement.execute();
+
+        preparedStatement.close();
+        connection.close();
+    }
+
     public Player getPlayer(long discordID) throws SQLException {
         Connection connection = DriverManager.getConnection(DATABASE_URL);
         Player player = new Player();

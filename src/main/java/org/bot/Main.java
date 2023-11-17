@@ -15,6 +15,12 @@ import org.bot.components.Buttons;
 import org.bot.components.Modals;
 import org.bot.components.SelectMenus;
 import org.bot.converters.Config;
+import org.bot.scripts.CommandLogger;
+
+import java.sql.Time;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 public class Main {
@@ -41,6 +47,22 @@ public class Main {
             // Sets status and activity
             jda.getPresence().setStatus(OnlineStatus.ONLINE);
             jda.getPresence().setActivity(Activity.playing("Slapshot: Rebound"));
+
+            Thread thread = new Thread() {
+                @Override
+                public void run() {
+                    CommandLogger commandLogger = new CommandLogger();
+                    while (true) {
+                        try {
+                            Thread.sleep(1000*60);
+                            commandLogger.removeOldLogs(1, TimeUnit.HOURS);
+                        } catch (InterruptedException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                }
+            };
+            thread.start();
 
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 log.info("Cleaning up...");

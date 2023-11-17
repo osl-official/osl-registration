@@ -61,12 +61,13 @@ public class RegistrationMessage {
                         .addField("Team ID", team.nameAbbr().toString(), true)
                         .addField(rolesField)
                         .addField("Requested Time","<t:" + Instant.now().getEpochSecond() + ":f>", false)
-                        .setFooter(null)
                         .build())
                 .setComponents(
-                        ActionRow.of(Button.danger("deny", "Deny").withEmoji(Emoji.fromUnicode("U+2716")),
-                                Button.success("approve", "Approve").withEmoji(Emoji.fromUnicode("U+2705")))
-                )
+                        ActionRow.of(Button.danger("deny", "Deny").withEmoji(Emoji.fromUnicode("U+2716"))),
+                        ActionRow.of(StringSelectMenu.create("league-selector")
+                                .addOption("Pro", "pro")
+                                .addOption("Intermediate", "im")
+                                .addOption("Open", "open").build()))
                 .queue();
     }
 

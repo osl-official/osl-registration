@@ -11,8 +11,11 @@ import net.dv8tion.jda.api.interactions.components.text.TextInputStyle;
 import net.dv8tion.jda.api.interactions.modals.Modal;
 import org.bot.converters.Config;
 import org.bot.converters.Database;
+import org.bot.converters.EmbedConverter;
+import org.bot.enums.League;
 import org.bot.models.Player;
 import org.bot.models.Team;
+import org.bot.scripts.Registration;
 import org.bot.scripts.RegistrationMessage;
 import org.bot.scripts.Roles;
 
@@ -22,6 +25,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -30,7 +34,8 @@ public class SelectMenus extends ListenerAdapter {
 
     @Override
     public void onStringSelectInteraction(StringSelectInteractionEvent event) {
-        switch (event.getSelectMenu().getId()){
+
+        switch (Objects.requireNonNull(event.getSelectMenu().getId())){
             case "choose-team" -> {
                 if (event.getSelectedOptions().get(0).getValue().equalsIgnoreCase("NEW")) {
                     TextInput teamIdInput = TextInput.create("team-id", "Team ID", TextInputStyle.SHORT)
@@ -84,61 +89,27 @@ public class SelectMenus extends ListenerAdapter {
                         .setComponents()
                         .queue();
 
+                Registration registration = new Registration(event.getGuild());
+
                 if (isFreeAgentApproval) {
-                    String discordID = event.getMessage().getEmbeds().get(0).getFields().stream()
-                            .filter(field -> field.getName().equals("Player")).findFirst().get()
-                            .getValue().split("\n")[0].replace("DiscordID: ", "").trim();
+                    String discordID = Objects.requireNonNull(event.getMessage().getEmbeds().get(0).getFields().stream()
+                            .filter(field -> Objects.equals(field.getName(), "Player")).findFirst().get()
+                            .getValue()).split("\n")[0].replace("DiscordID: ", "").trim();
 
-                    new Roles(event.getGuild())
-                            .giveRole(
-                                    event.getGuild().getMemberById(discordID).getUser(),
-                                    event.getSelectedOptions().get(0).getLabel() +
-                                            " Free Agent");
-                    try {
-                        database.addFreeAgent(Long.parseLong(discordID));
-                        log.info(discordID + " has become a free agent");
-                    } catch (SQLException e) {
-                        throw new RuntimeException(e);
-                    }
+                    registration.assignFreeAgent(Long.parseLong(discordID),
+                            League.valueOf(event.getSelectedOptions().get(0).getLabel()));
 
-                    return;
+                } else {
+                    MessageEmbed messageEmbed = event.getMessage().getEmbeds().get(0);
+
+                    registration.registerTeam(new EmbedConverter(messageEmbed).getTeamFromEmbed(),
+                            event.getSelectedOptions().get(0).getLabel());
                 }
 
-                List<String> discordIDsList = new ArrayList<>();
 
-                String[] discordIDs = event.getMessage().getEmbeds().get(0).getFields().stream()
-                        .filter(field -> field.getName().equals("Team")).findFirst().get()
-                        .getValue().replace("Captain: ", "")
-                        .replace("\nPlayers: ", " ").split(" ");
-
-                for (String discordID: discordIDs) {
-                    discordIDsList.add(discordID.replaceAll("[<@>]", ""));
-                }
-                Roles roles = new Roles(event.getGuild());
-                String teamName = event.getMessage().getEmbeds().get(0).getFields().get(1).getValue();
-                String teamID = event.getMessage().getEmbeds().get(0).getFields().get(2).getValue();
-                roles.giveRoleToMultiple(discordIDsList,
-                        teamName);
-                roles.giveRoleToMultiple(discordIDsList,  event.getInteraction().getSelectedOptions().get(0).getLabel() + " Player");
-
-                try {
-                    if (!database.doesTeamIdExist(teamID)) {
-                        database.addNewTeam(teamID, teamName);
-                    }
-
-                    database.setTeamTaken(teamID, event.getUser().getIdLong());
-                    discordIDsList.forEach(playerID -> {
-                        try {
-                            database.addPlayerToTeam(Long.parseLong(playerID), teamID);
-                            log.info(playerID + " has been added to " + teamName);
-                        } catch (SQLException e) {
-                            throw new RuntimeException(e);
-                        }
-                    });
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
-                }
             }
         }
     }
+
+
 }
