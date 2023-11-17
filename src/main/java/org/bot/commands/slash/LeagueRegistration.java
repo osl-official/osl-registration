@@ -2,6 +2,7 @@ package org.bot.commands.slash;
 
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
@@ -21,36 +22,18 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
-public class LeagueRegistration extends ListenerAdapter {
+public class LeagueRegistration {
     private final int MESSAGE_TIMEOUT = 10;
     private final Database DATABASE = new Database();
     private ReplyEphemeral replyEphemeral;
+    private SlashCommandInteractionEvent event;
 
-    @Override
-    public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
-        String name = event.getName();
-
-        CommandLogger commandLogger = new CommandLogger();
-        replyEphemeral = new ReplyEphemeral(event);
-
-        int interval = 5;
-        TimeUnit timeUnit = TimeUnit.MINUTES;
-
-        if (commandLogger.usedCommandWithinTimeFrame(event, interval, timeUnit)) {
-            replyEphemeral.sendThenDelete("Command Cool Down! Please wait " + interval + " " + timeUnit +
-                            " before using that command again",
-                    MESSAGE_TIMEOUT, TimeUnit.SECONDS);
-        }
-
-        commandLogger.recordCommand(event);
-
-        switch (name.toLowerCase()) {
-            case "register-fa" -> registerFreeAgentEvent(event);
-            case "register-team" -> registerTeamEvent(event);
-        }
+    public LeagueRegistration(SlashCommandInteractionEvent event) {
+        this.replyEphemeral = new ReplyEphemeral(event);
+        this.event = event;
     }
 
-    private void registerFreeAgentEvent(SlashCommandInteractionEvent event) {
+    public void registerFreeAgentEvent() {
         try {
             if (DATABASE.isFreeAgent(event.getUser().getIdLong())) {
                 replyEphemeral.sendThenDelete(
@@ -82,7 +65,7 @@ public class LeagueRegistration extends ListenerAdapter {
         event.replyModal(modal).queue();
     }
 
-    private void registerTeamEvent(SlashCommandInteractionEvent event) {
+    public void registerTeamEvent() {
         replyEphemeral = new ReplyEphemeral(event);
         List<OptionMapping> players = event.getOptionsByType(OptionType.USER);
         for (OptionMapping player:players) {

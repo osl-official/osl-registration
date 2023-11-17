@@ -31,11 +31,9 @@ public class Main {
                     // Event listeners to be added
                     .addEventListeners(
                             new CommandInitializer(),
-                            new LeagueRegistration(),
                             new SelectMenus(),
                             new Buttons(),
-                            new Modals(),
-                            new AdminLeagueRegistration())
+                            new Modals())
                     .build();
 
             jda.awaitReady();

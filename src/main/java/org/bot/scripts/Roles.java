@@ -2,10 +2,7 @@ package org.bot.scripts;
 
 import lombok.AllArgsConstructor;
 import net.dv8tion.jda.api.EmbedBuilder;
-import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.MessageEmbed;
-import net.dv8tion.jda.api.entities.Role;
-import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.entities.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -34,12 +31,15 @@ public class Roles {
         giveRole(Objects.requireNonNull(guild.getMemberById(discordID)).getUser(), roleName);
     }
 
-    public void removeRole(User user, String roleName) {
-        Role role = getRole(roleName);
-        if (role == null) {
-            return;
-        }
-        guild.removeRoleFromMember(user, role).queue();
+    public void removeRole(@NotNull User user, String roleName) {
+        Member member = guild.getMemberById(user.getId());
+        assert member != null;
+        member.getRoles().forEach(role -> {
+            if (role.getName().contains(roleName)) {
+                System.out.println(role);
+                guild.removeRoleFromMember(user, role).queue();
+            }
+        });
     }
 
     public void removeRole(@NotNull Long discordID,@NotNull String roleName) {
