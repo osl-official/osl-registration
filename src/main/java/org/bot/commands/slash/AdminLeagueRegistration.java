@@ -10,6 +10,7 @@ import org.bot.models.Player;
 import org.bot.scripts.RegistrationMessage;
 import org.bot.scripts.ReplyEphemeral;
 import org.bot.scripts.Roles;
+import org.bot.scripts.Roster;
 
 import java.sql.SQLException;
 import java.util.HashMap;
@@ -46,6 +47,7 @@ public class AdminLeagueRegistration {
             roles.removeRole(freeAgent, "Free Agent");
 
             database.removeFreeAgent(freeAgent.getIdLong());
+            new Roster(event.getGuild()).removeFromRoster(freeAgent.getIdLong());
         } catch (SQLException e) {
             log.error(e.getLocalizedMessage());
         }

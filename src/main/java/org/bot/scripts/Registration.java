@@ -4,14 +4,12 @@ import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.entities.Guild;
 import org.bot.converters.Database;
 import org.bot.enums.League;
-import org.bot.models.Player;
 import org.bot.models.Team;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.ExecutionException;
 
 @Slf4j
 public class Registration {
@@ -49,6 +47,10 @@ public class Registration {
 
             database.addCaptain(team.captain().discordId(), team.nameAbbr());
             log.info(team.captain().discordId() + " has been added to " + team.name());
+
+            Roster roster = new Roster(guild);
+            roster.addToRoster(new Team(team.captain(), team.players(), team.name(), team.nameAbbr(),
+                    League.valueOf(league.toUpperCase())));
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -64,8 +66,13 @@ public class Registration {
             Database database = new Database();
             database.addFreeAgent(discordId);
             log.info(discordId + " has become a free agent");
+            Roster roster = new Roster(guild);
+            roster.addToRoster(discordId, league);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
     }
+
+
+
 }

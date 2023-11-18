@@ -54,7 +54,7 @@ public class Main {
                     CommandLogger commandLogger = new CommandLogger();
                     while (true) {
                         try {
-                            Thread.sleep(1000*60);
+                            Thread.sleep(1000*60*60);
                             commandLogger.removeOldLogs(1, TimeUnit.HOURS);
                         } catch (InterruptedException e) {
                             throw new RuntimeException(e);

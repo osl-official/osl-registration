@@ -6,7 +6,9 @@ import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import org.bot.converters.Database;
+import org.bot.models.Team;
 import org.bot.scripts.Roles;
+import org.bot.scripts.Roster;
 
 import java.awt.*;
 import java.sql.SQLException;
@@ -36,7 +38,7 @@ public class Buttons extends ListenerAdapter {
                         .setComponents()
                         .queue();
 
-                if (messageEmbed.getTitle().contains("disband")) {
+                if (messageEmbed.getTitle().contains("Disband")) {
                     String teamID = messageEmbed.getFields().get(0).getValue();
                     String[] players = messageEmbed.getFields().get(1).getValue().split("\n");
                     String teamName = messageEmbed.getDescription().split("\\*\\*")[1];
@@ -53,9 +55,10 @@ public class Buttons extends ListenerAdapter {
 
                     for (String discordID: players) {
                         roles.removeRole(Long.valueOf(discordID), teamName);
-                        System.out.println("Removed");
                         roles.removeRole(Long.valueOf(discordID), "Player"); // Removes League Player Role
                     }
+
+                    new Roster(event.getGuild()).removeFromRoster(roles.getRole(teamName));
                 }
             }
         }

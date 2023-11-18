@@ -30,4 +30,8 @@ public class Config {
     public String getTeamRegistrationChannel() {
         return String.valueOf(getYaml().get("team-registration"));
     }
+
+    public String getRosterChannel() {
+        return String.valueOf(getYaml().get("roster-channel"));
+    }
 }

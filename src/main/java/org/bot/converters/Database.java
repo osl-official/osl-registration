@@ -77,8 +77,7 @@ public class Database {
         Connection connection = DriverManager.getConnection(DATABASE_URL);
         PreparedStatement preparedStatement = connection.prepareStatement("UPDATE Teams " +
                 "SET captainID = NULL " +
-                "WHERE teamID = ?");
-        preparedStatement.setString(1, toSqlString(teamID.toUpperCase()));
+                "WHERE teamID = " + toSqlString(teamID.toUpperCase()));
         preparedStatement.execute();
 
         preparedStatement.close();
@@ -124,8 +123,8 @@ public class Database {
 
     public void disbandTeam(String teamID) throws SQLException {
         Connection connection = DriverManager.getConnection(DATABASE_URL);
-        PreparedStatement preparedStatement = connection.prepareStatement("DELETE FROM TeamPlayers WHERE teamID = ?");
-        preparedStatement.setString(1, toSqlString(teamID.toUpperCase()));
+        PreparedStatement preparedStatement = connection.prepareStatement("DELETE FROM TeamPlayers WHERE teamID = " +
+                toSqlString(teamID.toUpperCase()));
         preparedStatement.execute();
 
         preparedStatement.close();

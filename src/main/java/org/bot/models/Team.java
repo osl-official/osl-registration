@@ -34,4 +34,8 @@ public record Team(Player captain, List<Player> players, String name, String nam
     public Team(Player captain, List<Player> players, String name, String nameAbbr) {
         this(captain, players, name, nameAbbr.toUpperCase(), null, null);
     }
+
+    public Team(Player captain, List<Player> players, String name, String nameAbbr, League league) {
+        this(captain, players, name, nameAbbr.toUpperCase(), null, league);
+    }
 }

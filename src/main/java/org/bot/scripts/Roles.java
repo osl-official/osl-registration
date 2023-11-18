@@ -20,7 +20,6 @@ public class Roles {
         if (role != null) {
             guild.addRoleToMember(user, role).submit();
         } else {
-            System.out.println("New Role -> " + roleName);
             guild.createRole().setName(roleName)
                     .setMentionable(true)
                     .setHoisted(true)
@@ -42,7 +41,6 @@ public class Roles {
         assert member != null;
         member.getRoles().forEach(role -> {
             if (role.getName().contains(roleName)) {
-                System.out.println(role);
                 guild.removeRoleFromMember(user, role).queue();
             }
         });

@@ -97,7 +97,7 @@ public class SelectMenus extends ListenerAdapter {
                             .getValue()).split("\n")[0].replace("DiscordID: ", "").trim();
 
                     registration.assignFreeAgent(Long.parseLong(discordID),
-                            League.valueOf(event.getSelectedOptions().get(0).getLabel()));
+                            League.valueOf(event.getSelectedOptions().get(0).getLabel().toUpperCase()));
 
                 } else {
                     MessageEmbed messageEmbed = event.getMessage().getEmbeds().get(0);
