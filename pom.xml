@@ -19,9 +19,15 @@
     <logback-classic-version>1.2.9</logback-classic-version>
     <lombok-version>1.18.28</lombok-version>
     <sqlite-jdbc-version>3.42.0.0</sqlite-jdbc-version>
+    <gson-version>2.10.1</gson-version>
   </properties>
 
   <dependencies>
+    <dependency>
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
+      <version>${gson-version}</version>
+    </dependency>
     <dependency>
       <groupId>org.xerial</groupId>
       <artifactId>sqlite-jdbc</artifactId>

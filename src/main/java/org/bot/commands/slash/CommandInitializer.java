@@ -26,6 +26,9 @@ public class CommandInitializer extends ListenerAdapter {
                         .addOption(OptionType.USER, "player2", "Player 2", true)
                         .addOption(OptionType.USER, "player3", "Player 3", false)
                         .addOption(OptionType.USER, "player4", "Player 4", false),
+                Commands.slash("team-template", "Get a JSON template of a Team Object"),
+                Commands.slash("register-team-upload", "Upload a JSON file containing your new Teams details")
+                        .addOption(OptionType.ATTACHMENT, "json", "Your teams JSON file", true),
 
                 // ADMIN COMMANDS
                 Commands.slash("remove-fa", "[ADMIN] Remove Free Agent")
@@ -73,6 +76,8 @@ public class CommandInitializer extends ListenerAdapter {
         switch (name.toLowerCase()) {
             case "register-fa" -> new LeagueRegistration(event).registerFreeAgentEvent();
             case "register-team" -> new LeagueRegistration(event).registerTeamEvent();
+            case "team-template" -> new LeagueRegistration(event).teamTemplateEvent();
+            case "register-team-upload" -> new LeagueRegistration(event).teamTemplateUploadEvent();
 
             default -> {
                 if (!Objects.requireNonNull(Objects.requireNonNull(event.getGuild()).getMember(event.getUser()))
