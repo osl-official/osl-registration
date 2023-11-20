@@ -11,7 +11,7 @@ import java.util.stream.Collectors;
 
 public class CommandLogger {
     private final String PATH = "src/main/resources/command-logs.txt";
-    private final char SEPERATOR = ',';
+    private final char SEPARATOR = ',';
 
     public void recordCommand(SlashCommandInteractionEvent event) {
         try {
@@ -20,9 +20,9 @@ public class CommandLogger {
             StringBuilder stringBuilder = new StringBuilder();
 
             stringBuilder.append(event.getName())
-                    .append(SEPERATOR)
+                    .append(SEPARATOR)
                     .append(event.getUser().getId())
-                    .append(SEPERATOR)
+                    .append(SEPARATOR)
                     .append(event.getTimeCreated().toEpochSecond())
                     .append(System.lineSeparator());
 
@@ -46,7 +46,7 @@ public class CommandLogger {
         return getCommandHistory().stream().filter(s -> s.contains(event.getUser().getId()))
                 .filter(s -> s.contains(event.getName()))
                 .anyMatch(s ->
-                        Long.parseLong(s.split(String.valueOf(SEPERATOR))[2]) + timeUnit.toSeconds(interval) >
+                        Long.parseLong(s.split(String.valueOf(SEPARATOR))[2]) + timeUnit.toSeconds(interval) >
                                 event.getTimeCreated().toEpochSecond());
     }
 

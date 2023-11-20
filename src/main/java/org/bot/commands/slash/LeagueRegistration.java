@@ -2,28 +2,24 @@ package org.bot.commands.slash;
 
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.EmbedBuilder;
-import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
-import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
 import net.dv8tion.jda.api.interactions.components.text.TextInput;
 import net.dv8tion.jda.api.interactions.components.text.TextInputStyle;
 import net.dv8tion.jda.api.interactions.modals.Modal;
-import net.dv8tion.jda.api.utils.AttachedFile;
 import net.dv8tion.jda.api.utils.FileUpload;
 import org.bot.converters.Database;
 import org.bot.converters.JsonConverter;
 import org.bot.models.Team;
-import org.bot.scripts.CommandLogger;
 import org.bot.scripts.RegistrationMessage;
 import org.bot.scripts.ReplyEphemeral;
 import org.bot.scripts.Roles;
-import org.json.simple.parser.ParseException;
 
+import java.awt.*;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
@@ -169,15 +165,22 @@ public class LeagueRegistration {
     }
 
     public void teamTemplateEvent() {
+        JsonConverter jsonConverter = new JsonConverter();
+
+
         EmbedBuilder builder = new EmbedBuilder();
+        File file = new File("src/main/resources/images/json-icon.png");
         builder.setTitle("Team Template JSON")
+                .setThumbnail("attachment://json-icon.png")
+                .setColor(9926568)
                 .addField("Notes:", "- Slap ID are option fields and are not required.\n" +
-                        "- A minimun of 2 players and a max of 4 must be entered.", false)
-                .setFooter("If you have any questions of issues feel free to reach out to a League Coordinator",
+                        "- A minimum of 2 players and a max of 4 must be entered.", false)
+                .setFooter("If you have any questions or issues feel free to reach out to a League Coordinator",
                         event.getGuild().getIconUrl());
 
         event.replyEmbeds(builder.build())
-                .addFiles(FileUpload.fromData(new File("src/main/resources/team-template.json"))).queue();
+                .addFiles(jsonConverter.generateTemplateJson(),
+                        FileUpload.fromData(file, "json-icon.png")).queue();
     }
 
     public void teamTemplateUploadEvent() {
@@ -198,20 +201,21 @@ public class LeagueRegistration {
                 while ((c = reader.read()) != -1) {
                     textBuilder.append((char) c);
                 }
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
 
-            System.out.println(textBuilder.toString());
-            JsonConverter jsonConverter = new JsonConverter();
-            Team newTeam = jsonConverter.jsonToTeam(textBuilder.toString());
+                Team newTeam = new JsonConverter().jsonToTeam(textBuilder.toString());
 
-            new RegistrationMessage(event.getJDA()).leagueTeam(newTeam,
+                new RegistrationMessage(event.getJDA()).leagueTeam(newTeam,
                     new Roles(event.getGuild()).getTeamRoleField(newTeam.name()));
 
-            replyEphemeral.sendThenDelete("Valid JSON! Team registration now awaiting approval.", 10,
-                    TimeUnit.SECONDS);
-        } catch (InterruptedException | ExecutionException | IOException | ParseException e) {
+                replyEphemeral.sendThenDelete("Valid JSON! Team registration now awaiting approval.", 10,
+                        TimeUnit.SECONDS);
+
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            } catch (IllegalArgumentException e) {
+                replyEphemeral.sendThenDelete(e.getLocalizedMessage(), 10, TimeUnit.SECONDS);
+            }
+        } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException(e);
         }
     }

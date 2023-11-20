@@ -25,6 +25,9 @@ public record Team(Player captain, List<Player> players, String name, String nam
         if (nameAbbr.length() > 3) {
             throw new IllegalArgumentException("Team Name Abbreviation must not be more than 4 characters long.");
         }
+        if (nameAbbr.isEmpty()) {
+            throw new IllegalArgumentException("Team Name Abbreviation must not be empty.");
+        }
     }
 
     public Team(Player captain, List<Player> players) {
@@ -32,10 +35,10 @@ public record Team(Player captain, List<Player> players, String name, String nam
     }
 
     public Team(Player captain, List<Player> players, String name, String nameAbbr) {
-        this(captain, players, name, nameAbbr.toUpperCase(), null, null);
+        this(captain, players, name, nameAbbr, null, null);
     }
 
     public Team(Player captain, List<Player> players, String name, String nameAbbr, League league) {
-        this(captain, players, name, nameAbbr.toUpperCase(), null, league);
+        this(captain, players, name, nameAbbr, null, league);
     }
 }
