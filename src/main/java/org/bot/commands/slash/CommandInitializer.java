@@ -7,6 +7,7 @@ import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
+import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import org.bot.scripts.CommandLogger;
 import org.bot.scripts.ReplyEphemeral;
 import org.jetbrains.annotations.NotNull;
@@ -43,6 +44,12 @@ public class CommandInitializer extends ListenerAdapter {
                         ),
                 Commands.slash("disband-team", "[ADMIN] Disband Selected Team")
                         .addOption(OptionType.ROLE, "teamrole", "Team to disband", true)
+                        .addOption(OptionType.BOOLEAN, "assignable",
+                                "Allow new registrations to use the following Team Name", true)
+                        .addOption(OptionType.BOOLEAN, "delete-role",
+                                "Delete Team Role. If empty false is assumed.", false)
+                        .addOption(OptionType.BOOLEAN, "delete-channels",
+                                "Delete Team Voice and Text Channels. If empty false is assumed.", false)
                         .setDefaultPermissions(
                                 DefaultMemberPermissions.enabledFor(Permission.ADMINISTRATOR)
                         ),

@@ -51,6 +51,10 @@ public class Registration {
             Roster roster = new Roster(guild);
             roster.addToRoster(new Team(team.captain(), team.players(), team.name(), team.nameAbbr(),
                     League.valueOf(league.toUpperCase())));
+
+            TeamChannel teamChannel = new TeamChannel(guild);
+            teamChannel.addTeamTextChannel(team.name(), League.valueOf(league.toUpperCase()));
+            teamChannel.addTeamVoiceChannel(team.name(), League.valueOf(league.toUpperCase()));
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }

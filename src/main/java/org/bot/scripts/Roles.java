@@ -102,4 +102,14 @@ public class Roles {
 
         return field.addField("Role", roleOptional.get().getAsMention(), true).build().getFields().get(0);
     }
+
+    public void deleteRole(String teamName) {
+        List<Role> roles = guild.getRoles();
+
+        for (Role role : roles) {
+            if (role.getName().toLowerCase().contains(teamName.toLowerCase())) {
+                role.delete().queue();
+            }
+        }
+    }
 }

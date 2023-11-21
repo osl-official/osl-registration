@@ -298,4 +298,14 @@ public class Database {
 
         return isInTeam || isCaptain;
     }
+
+    public void deleteTeam(String teamID) throws SQLException {
+        Connection connection = DriverManager.getConnection(DATABASE_URL);
+        PreparedStatement preparedStatement = connection
+                .prepareStatement("DELETE FROM Teams WHERE teamID = " + toSqlString(teamID));
+        preparedStatement.execute();
+
+        preparedStatement.close();
+        connection.close();
+    }
 }
