@@ -1,5 +1,6 @@
 package org.bot.commands.slash;
 
+import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.events.guild.GuildReadyEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
@@ -15,11 +16,13 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
+@Slf4j
 public class CommandInitializer extends ListenerAdapter {
     private static final int MESSAGE_TIMEOUT = 5;
 
     @Override
     public void onGuildReady(GuildReadyEvent event) {
+        log.info("Updating Commands for Guild " + event.getGuild().getName());
         event.getJDA().updateCommands().addCommands(
                 Commands.slash("register-fa", "Register to become a Free Agent"),
                 Commands.slash("register-team", "Register a Team for the current season")
@@ -58,7 +61,8 @@ public class CommandInitializer extends ListenerAdapter {
                         .addOption(OptionType.STRING, "teamid", "New Team's ID", true)
                         .setDefaultPermissions(
                                 DefaultMemberPermissions.enabledFor(Permission.ADMINISTRATOR)
-                        )
+                        ),
+                Commands.slash("refresh-roster", "[ADMIN] Refresh the roster according to the database")
         ).queue();
     }
 
@@ -96,6 +100,7 @@ public class CommandInitializer extends ListenerAdapter {
                     case "add-fa" -> new AdminLeagueRegistration(event).addFreeAgent();
                     case "disband-team" -> new AdminLeagueRegistration(event).disbandTeam();
                     case "create-team" -> new AdminLeagueRegistration(event).createTeam();
+                    case "refresh-roster" ->  new AdminLeagueRegistration(event).refreshRoster();
                 }
             }
         }

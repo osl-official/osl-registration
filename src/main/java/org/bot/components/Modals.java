@@ -9,6 +9,7 @@ import org.bot.converters.Database;
 import org.bot.models.Player;
 import org.bot.models.Team;
 import org.bot.scripts.RegistrationMessage;
+import org.bot.scripts.ReplyEphemeral;
 import org.bot.scripts.Roles;
 
 import java.sql.SQLException;
@@ -92,20 +93,31 @@ public class Modals extends ListenerAdapter {
                         .replaceAll("[<@>]", "").split(" ")).toList()
                         .forEach(idString -> playerList.add(new Player(Long.parseLong(idString))));
 
-                Team newTeam = new Team(new Player(event.getUser().getIdLong()), playerList, teamName, teamId);
+                try {
+                    Team newTeam = new Team(new Player(event.getUser().getIdLong()), playerList, teamName, teamId);
 
-                registrationMessage.leagueTeam(newTeam,
-                        roles.getTeamRoleField(teamName));
+                    registrationMessage.leagueTeam(newTeam,
+                            roles.getTeamRoleField(teamName));
 
-                event.editMessage("A request has been sent to the mod team. \n`This message will delete in 5 seconds.`")
-                        .setComponents()
-                        .submit()
-                        .thenCompose((msg) -> msg.deleteOriginal().submitAfter(5, TimeUnit.SECONDS))
-                        .whenComplete((success, error) -> {
-                            if (error != null) {
-                                log.info("Ephemeral Message was dealt with before auto delete.");
-                            }
-                        });
+                    event.editMessage("A request has been sent to the mod team. \n`This message will delete in 5 seconds.`")
+                            .setComponents()
+                            .submit()
+                            .thenCompose((msg) -> msg.deleteOriginal().submitAfter(5, TimeUnit.SECONDS))
+                            .whenComplete((success, error) -> {
+                                if (error != null) {
+                                    log.info("Ephemeral Message was dealt with before auto delete.");
+                                }
+                            });
+                } catch (IllegalArgumentException e) {
+                    event.reply(e.getLocalizedMessage()).setEphemeral(true)
+                            .submit()
+                            .thenCompose(msg -> msg.deleteOriginal().submitAfter(10, TimeUnit.SECONDS))
+                            .whenComplete((success, error) -> {
+                                if (error != null) {
+                                    log.info("Ephemeral Message was dealt with before auto delete.");
+                                }
+                            });
+                }
             }
         }
     }

@@ -4,12 +4,16 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import org.bot.converters.Config;
+import org.bot.converters.Database;
 import org.bot.enums.League;
 import org.bot.models.Player;
 import org.bot.models.Team;
 
 import java.awt.*;
 import java.nio.channels.Channel;
+import java.sql.SQLException;
+import java.util.Arrays;
+import java.util.Objects;
 
 public class Roster {
     private final Config CONFIG = new Config();
@@ -26,11 +30,12 @@ public class Roster {
 
     public void addToRoster(long discordId, League league) {
         TextChannel channel = guild.getTextChannelById(CONFIG.getRosterChannel());
+        assert channel != null;
         MessageHistory messageHistory = MessageHistory.getHistoryFromBeginning(channel).complete();
 
         for (Message message : messageHistory.getRetrievedHistory()) {
             MessageEmbed messageEmbed = message.getEmbeds().get(0);
-            if (messageEmbed.getTitle().contains("Free Agents")) {
+            if (Objects.requireNonNull(messageEmbed.getTitle()).equalsIgnoreCase("Free Agents")) {
                 EmbedBuilder builder = new EmbedBuilder();
                 builder.setTitle(messageEmbed.getTitle())
                         .setDescription(messageEmbed.getDescription())
@@ -106,21 +111,19 @@ public class Roster {
 
     public void removeFromRoster(long discordId) {
         TextChannel channel = guild.getTextChannelById(CONFIG.getRosterChannel());
+        assert channel != null;
         MessageHistory messageHistory = MessageHistory.getHistoryFromBeginning(channel).complete();
 
         for (Message message : messageHistory.getRetrievedHistory()) {
             MessageEmbed messageEmbed = message.getEmbeds().get(0);
-            if (messageEmbed.getTitle().contains("Teams")) {
+            if (Objects.requireNonNull(messageEmbed.getTitle()).contains("Free Agents")) {
                 EmbedBuilder builder = new EmbedBuilder();
                 builder.setTitle(messageEmbed.getTitle())
                         .setDescription(messageEmbed.getDescription())
                         .setColor(messageEmbed.getColor());
-                StringBuilder sb = new StringBuilder();
-                sb.append("<@").append(discordId).append(">");
-                sb.append(System.lineSeparator());
 
                 messageEmbed.getFields().forEach(field -> {
-                    String value = field.getValue().replace(sb.toString(), "");
+                    String value = field.getValue().replaceAll("(<@" + discordId + ">)", System.lineSeparator());
                     builder.addField(field.getName(), value, true);
                 });
 
@@ -158,13 +161,16 @@ public class Roster {
 
     private MessageEmbed.Field getFreeAgentField(Long discordId, League league, MessageEmbed messageEmbed) {
         for (MessageEmbed.Field field : messageEmbed.getFields()) {
-            if (field.getName().equalsIgnoreCase(league.label)) {
+            if (Objects.requireNonNull(field.getName()).equalsIgnoreCase(league.label)) {
                 StringBuilder sb = new StringBuilder();
-                if (!field.getValue().isBlank()) {
+                sb.append(field.getValue());
+
+                System.out.println("---" + sb + "---");
+                System.out.println(sb.length());
+                if (Objects.requireNonNull(field.getValue()).length() > 1) {
                     sb.append(System.lineSeparator());
                 }
-                sb.append(field.getValue())
-                        .append("<@")
+                sb.append("<@")
                         .append(discordId)
                         .append(">");
 
@@ -200,6 +206,41 @@ public class Roster {
             }
         }
         return null;
+    }
+
+    public void refreshRoster() {
+        TextChannel channel = guild.getTextChannelById(CONFIG.getRosterChannel());
+        MessageHistory messageHistory = MessageHistory.getHistoryFromBeginning(channel).complete();
+
+        // Clears Roster
+        for (Message message : messageHistory.getRetrievedHistory()) {
+            message.getEmbeds().forEach(messageEmbed -> {
+                if (messageEmbed.getTitle().contains("Teams")) {
+                    messageEmbed.getFields().forEach(field -> Arrays.stream(field.getValue().split(System.lineSeparator()))
+                            .filter(s -> s.matches("(<@&\\d+>)"))
+                            .forEach(id -> removeFromRoster(
+                                    guild.getRoleById(id.replace("<@&", "").replace(">", "")))));
+                } else if (messageEmbed.getTitle().contains("Free Agents")) {
+                    messageEmbed.getFields().forEach(field -> {
+                        for (String id : field.getValue().split(System.lineSeparator())) {
+                            if (id.length() > 1) {
+                                long idLong = Long.parseLong(id.replaceAll("[^\\d]", ""));
+                                System.out.println(idLong);
+                                removeFromRoster(idLong);
+                            }
+                        }
+                    });
+                }
+            });
+        }
+        try {
+            Database database = new Database();
+            database.getFreeAgents().forEach(player -> addToRoster(player.discordId(), player.league()));
+            database.getTakenTeamModels().forEach(this::addToRoster);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
     }
 
     private void initRoster() {

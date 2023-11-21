@@ -105,11 +105,7 @@ public class SelectMenus extends ListenerAdapter {
                     registration.registerTeam(new EmbedConverter(messageEmbed).getTeamFromEmbed(),
                             event.getSelectedOptions().get(0).getLabel());
                 }
-
-
             }
         }
     }
-
-
 }

@@ -47,7 +47,7 @@ public class AdminLeagueRegistration {
             roles.removeRole(freeAgent, "Free Agent");
 
             database.removeFreeAgent(freeAgent.getIdLong());
-            new Roster(event.getGuild()).removeFromRoster(freeAgent.getIdLong());
+            new Roster(Objects.requireNonNull(event.getGuild())).removeFromRoster(freeAgent.getIdLong());
         } catch (SQLException e) {
             log.error(e.getLocalizedMessage());
         }
@@ -134,5 +134,12 @@ public class AdminLeagueRegistration {
         } catch (SQLException e) {
             log.error(e.getLocalizedMessage());
         }
+    }
+
+    public void refreshRoster() {
+        Roster roster = new Roster(Objects.requireNonNull(event.getGuild()));
+        roster.refreshRoster();
+
+        replyEphemeral.sendThenDelete("Updating the roster now, this may take a minute", 10, TimeUnit.SECONDS);
     }
 }

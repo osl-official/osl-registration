@@ -1,13 +1,12 @@
 package org.bot.converters;
 
 import lombok.extern.slf4j.Slf4j;
+import org.bot.enums.League;
 import org.bot.models.Player;
+import org.bot.models.Team;
 
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.OptionalInt;
+import java.util.*;
 
 @Slf4j
 public class Database {
@@ -54,6 +53,7 @@ public class Database {
             HashMap<String, String> teamTaken = new HashMap<>();
             teamTaken.put("teamName", resultSet.getString("teamName"));
             teamTaken.put("teamID", resultSet.getString("teamID"));
+            teamTaken.put("league", resultSet.getString("league"));
             teamsTaken.add(teamTaken);
         }
         connection.close();
@@ -76,7 +76,7 @@ public class Database {
     public void setTeamNotTaken(String teamID) throws SQLException {
         Connection connection = DriverManager.getConnection(DATABASE_URL);
         PreparedStatement preparedStatement = connection.prepareStatement("UPDATE Teams " +
-                "SET captainID = NULL " +
+                "SET captainID = NULL, league = NULL " +
                 "WHERE teamID = " + toSqlString(teamID.toUpperCase()));
         preparedStatement.execute();
 
@@ -87,7 +87,7 @@ public class Database {
     public void addNewTeam(String teamID, String teamName) throws SQLException {
         Connection connection = DriverManager.getConnection(DATABASE_URL);
         PreparedStatement preparedStatement = connection.prepareStatement("INSERT INTO Teams " +
-                "VALUES (?,?,NULL)");
+                "VALUES (?,?,NULL,NULL)");
         preparedStatement.setString(1, teamID.toUpperCase());
         preparedStatement.setString(2, teamName);
         preparedStatement.execute();
@@ -96,19 +96,19 @@ public class Database {
         connection.close();
     }
 
-    public void addFreeAgent(long discordID) throws SQLException {
+    public void addFreeAgent(long discordID, League league) throws SQLException {
         if (getPlayer(discordID).isNull()) {
             addPlayer(discordID);
         }
 
         Connection connection = DriverManager.getConnection(DATABASE_URL);
-        PreparedStatement preparedStatement = connection.prepareStatement("INSERT INTO FreeAgents VALUES (?)");
+        PreparedStatement preparedStatement = connection.prepareStatement("INSERT INTO FreeAgents VALUES (?, ?)");
         preparedStatement.setLong(1, discordID);
+        preparedStatement.setString(2, league.label);
         preparedStatement.execute();
 
         preparedStatement.close();
         connection.close();
-
     }
 
     public void removePlayerFromTeam(long discordID) throws SQLException {
@@ -184,6 +184,18 @@ public class Database {
         connection.close();
     }
 
+    public void setLeague(League league, String teamID) throws SQLException {
+        Connection connection = DriverManager.getConnection(DATABASE_URL);
+        PreparedStatement preparedStatement = connection.prepareStatement(
+                "UPDATE Teams SET league = ? WHERE teamID = " +  toSqlString(teamID.toUpperCase()));
+        preparedStatement.setString(1, league.label);
+
+        preparedStatement.execute();
+
+        preparedStatement.close();
+        connection.close();
+    }
+
     public Player getPlayer(long discordID) throws SQLException {
         Connection connection = DriverManager.getConnection(DATABASE_URL);
         Player player = new Player();
@@ -195,7 +207,7 @@ public class Database {
 
         if(resultSet.next()) {
             OptionalInt slapID = resultSet.getObject("slapID") != null ? OptionalInt.of(resultSet.getInt("slapID")) : OptionalInt.empty();
-            player = new Player(discordID, slapID);
+            player = new Player(discordID, slapID, null);
         }
         connection.close();
         return player;
@@ -307,5 +319,39 @@ public class Database {
 
         preparedStatement.close();
         connection.close();
+    }
+
+    public List<Player> getFreeAgents() throws SQLException {
+        Connection connection = DriverManager.getConnection(DATABASE_URL);
+        List<Player> freeAgents = new ArrayList<>();
+
+        Statement statement = connection.createStatement();
+        statement.setQueryTimeout(10);
+
+        ResultSet resultSet = statement.executeQuery("SELECT * FROM FreeAgents");
+
+
+        while (resultSet.next()) {
+            freeAgents.add(new Player(
+                    resultSet.getLong("discordID"),
+                    League.valueOf(resultSet.getString("league").toUpperCase())));
+        }
+        connection.close();
+
+        return freeAgents;
+    }
+
+    public Iterable<Team> getTakenTeamModels() throws SQLException {
+        List<HashMap<String, String>> takenTeams = getTeamsTaken();
+        List<Team> teams = new ArrayList<>();
+
+        for (HashMap<String, String> takenTeam : takenTeams) {
+            List<Player> players = getTeamPlayers(takenTeam.get("teamID"));
+            Player captain = getCaptain(takenTeam.get("teamID"));
+            League league = League.valueOf(takenTeam.get("league").toUpperCase());
+            teams.add(new Team(captain, players, takenTeam.get("teamName"), takenTeam.get("teamID"), league));
+        }
+
+        return teams;
     }
 }

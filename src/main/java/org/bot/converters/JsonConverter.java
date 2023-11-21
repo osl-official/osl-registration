@@ -26,10 +26,10 @@ public class JsonConverter {
         List<Player> players = new ArrayList<>();
 
         for (PlayerDTO playerDTO : teamDTO.getPlayers()) {
-            players.add(new Player(playerDTO.getDiscordId(), OptionalInt.of(playerDTO.getSlapId())));
+            players.add(new Player(playerDTO.getDiscordId(), playerDTO.getSlapId()));
         }
 
-        Player captain = new Player(teamDTO.getCaptain().getDiscordId(), OptionalInt.of(teamDTO.getCaptain().getSlapId()));
+        Player captain = new Player(teamDTO.getCaptain().getDiscordId(), teamDTO.getCaptain().getSlapId());
 
         return new Team(captain, players, teamDTO.getTeamName(), teamDTO.getTeamId());
     }
