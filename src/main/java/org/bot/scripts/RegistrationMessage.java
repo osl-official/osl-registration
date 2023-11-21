@@ -13,6 +13,7 @@ import org.bot.converters.Config;
 import org.bot.models.Player;
 import org.bot.models.Team;
 
+import java.awt.*;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -71,11 +72,12 @@ public class RegistrationMessage {
                 .queue();
     }
 
-    public void disbandTeam(HashMap<String, String> team, User author, List<Player> players) {
+    public void disbandTeam(HashMap<String, String> team, User author, List<Player> players, boolean assignable, boolean deleteRole, boolean deleteChannels) {
         StringBuilder playersField = new StringBuilder();
         for (Player player: players) {
-            playersField.append(player.discordId())
-                    .append("\n");
+            playersField.append("<@")
+                    .append(player.discordId()).append(">")
+                    .append(System.lineSeparator());
         }
 
         this.jda.getChannelById(TextChannel.class, config.getTeamRegistrationChannel())
@@ -83,8 +85,12 @@ public class RegistrationMessage {
                         .setTitle("Team Disband Confirmation")
                         .setDescription(author.getAsMention() + " has requested to disband **" +
                                         team.get("teamName") + "**. This will kick all players from the team and make the team available for new team registration")
+                        .setColor(Color.ORANGE)
                         .addField("Team ID", team.get("teamID").toUpperCase(), true)
-                        .addField("Players Discord ID", playersField.toString(),true)
+                        .addField("Players", playersField.toString(),true)
+                        .addField("Assignable After Disband", String.valueOf(assignable), true)
+                        .addField("Delete Role", String.valueOf(deleteRole), true)
+                        .addField("Delete Channels", String.valueOf(deleteChannels), true)
                         .build())
                 .setComponents(
                         ActionRow.of(Button.danger("deny", "Deny").withEmoji(Emoji.fromUnicode("U+2716")),

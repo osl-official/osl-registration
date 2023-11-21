@@ -94,13 +94,19 @@ public class AdminLeagueRegistration {
                 return;
             }
 
-            replyEphemeral.sendThenDelete("Please confirm action at #" + config.getFaRegistrationChannel(),
+            replyEphemeral.sendThenDelete("Please confirm action at <#" + config.getTeamRegistrationChannel() + ">",
                     10, TimeUnit.SECONDS);
 
             List<Player> players = database.getTeamPlayers(team.get("teamID"));
             players.add(database.getCaptain(team.get("teamID")));
 
-            new RegistrationMessage(event.getJDA()).disbandTeam(team, event.getUser(), players);
+            boolean assignable = Objects.requireNonNull(event.getOption("assignable")).getAsBoolean();
+            boolean deleteRole = event.getOption("delete-role") != null &&
+                    Objects.requireNonNull(event.getOption("delete-role")).getAsBoolean();
+            boolean deleteChannels = event.getOption("delete-channels") != null &&
+                    Objects.requireNonNull(event.getOption("delete-channels")).getAsBoolean();
+
+            new RegistrationMessage(event.getJDA()).disbandTeam(team, event.getUser(), players, assignable, deleteRole, deleteChannels);
         } catch (SQLException e) {
             log.error(e.getLocalizedMessage());
         }
