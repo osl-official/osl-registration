@@ -3,13 +3,16 @@ A discord bot to handle team and free agent registration in Oceanic Slapshot Lea
 
 
 ## How to Run
+A simple shell script has been included to compile and run the program. In the command line simply run the following:
+```shell
+./start-bot.sh
+```
+
+## Features
 TODO
 
-## Feature List
+## TODO List
 - [ ] Unit Test
-- [ ] Integration Tests
-- [ ] CI/CD Pipeline
-- [ ] Upload code to GitHub
-### Commands
-- [X] /register-fa
-- [X] /register-team
+- [ ] Add ability to stop registration at certain date
+- [ ] Add ability to start registration at certain date
+- [ ] Add ability to set season number
