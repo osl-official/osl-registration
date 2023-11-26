@@ -5,6 +5,7 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.api.utils.FileUpload;
 import org.bot.converters.Database;
 import org.bot.scripts.CommandLogger;
 import org.bot.scripts.Roles;
@@ -12,12 +13,15 @@ import org.bot.scripts.Roster;
 import org.bot.scripts.TeamChannel;
 
 import java.awt.*;
+import java.io.File;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.util.Objects;
 
 @Slf4j
 public class Buttons extends ListenerAdapter {
+    private final File APPROVED_IMG = new File("src/main/resources/images/approve.png");
+    private final File DENIED_IMG = new File("src/main/resources/images/denied.png");
 
     @Override
     public void onButtonInteraction(ButtonInteractionEvent event) {
@@ -27,11 +31,13 @@ public class Buttons extends ListenerAdapter {
             case "deny" -> {
                 CommandLogger commandLogger = new CommandLogger();
                 event.getMessage().editMessageEmbeds(new EmbedBuilder(messageEmbed)
+                                .setThumbnail("attachment://denied.png")
                                 .setColor(Color.RED)
                                 .addField("Verdict", "Denied by " + event.getUser().getAsMention()
                                         + " at <t:" + Instant.now().getEpochSecond() + ":f>", false)
                                 .build())
                         .setComponents()
+                        .setFiles(FileUpload.fromData(DENIED_IMG, "denied.png"))
                         .queue();
                 if (event.getMessage().getEmbeds().get(0).getTitle().contains("Free Agent")) {
                     commandLogger.removeRequest(event.getUser().getId(), "free-agent");
@@ -42,10 +48,12 @@ public class Buttons extends ListenerAdapter {
             case "approve" -> {
                 event.getMessage().editMessageEmbeds(new EmbedBuilder(messageEmbed)
                                 .setColor(Color.GREEN)
+                                .setThumbnail("attachment://approved.png")
                                 .addField("Verdict", "Approved by " + event.getUser().getAsMention()
                                         + " at <t:" + Instant.now().getEpochSecond() + ":f>", false)
                                 .build())
                         .setComponents()
+                        .setFiles(FileUpload.fromData(APPROVED_IMG, "approved.png"))
                         .queue();
 
                 if (Objects.requireNonNull(messageEmbed.getTitle()).contains("Disband")) {

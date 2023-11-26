@@ -9,6 +9,7 @@ import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.components.text.TextInput;
 import net.dv8tion.jda.api.interactions.components.text.TextInputStyle;
 import net.dv8tion.jda.api.interactions.modals.Modal;
+import net.dv8tion.jda.api.utils.FileUpload;
 import org.bot.converters.Config;
 import org.bot.converters.Database;
 import org.bot.converters.EmbedConverter;
@@ -21,6 +22,7 @@ import org.bot.scripts.RegistrationMessage;
 import org.bot.scripts.Roles;
 
 import java.awt.Color;
+import java.io.File;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -31,7 +33,7 @@ import java.util.concurrent.TimeUnit;
 
 @Slf4j
 public class SelectMenus extends ListenerAdapter {
-    private final Database database = new Database();
+    private final File APPROVED_IMG = new File("src/main/resources/images/approve.png");
 
     @Override
     public void onStringSelectInteraction(StringSelectInteractionEvent event) {
@@ -84,12 +86,14 @@ public class SelectMenus extends ListenerAdapter {
                 boolean isFreeAgentApproval = event.getMessage().getEmbeds().get(0).getTitle().contains("Free Agent");
 
                 event.editMessageEmbeds(new EmbedBuilder(event.getMessage().getEmbeds().get(0))
+                                .setThumbnail("attachment://approved.png")
                                 .addField("League", event.getSelectedOptions().get(0).getLabel(), true)
                                 .setColor(Color.GREEN)
                                 .addField("Verdict", "Accepted by " + event.getUser().getAsMention()
                                         + " at <t:" + Instant.now().getEpochSecond() + ":f>", false)
                         .build())
                         .setComponents()
+                        .setFiles(FileUpload.fromData(APPROVED_IMG, "approved.png"))
                         .queue();
 
                 Registration registration = new Registration(event.getGuild());
