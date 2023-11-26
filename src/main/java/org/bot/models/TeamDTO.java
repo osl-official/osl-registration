@@ -1,17 +1,19 @@
 package org.bot.models;
 
-import lombok.Getter;
-import lombok.Setter;
-import lombok.ToString;
+import lombok.*;
 
 import java.util.List;
 
 @Getter @ToString
+@AllArgsConstructor
+@NoArgsConstructor
 public class TeamDTO {
     @Setter
     private String teamName;
     @Setter
     private String teamId;
+    @Setter
+    private String league;
     @Setter
     private PlayerDTO captain;
     @Setter

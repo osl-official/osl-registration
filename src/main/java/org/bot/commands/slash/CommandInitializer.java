@@ -62,7 +62,9 @@ public class CommandInitializer extends ListenerAdapter {
                         .setDefaultPermissions(
                                 DefaultMemberPermissions.enabledFor(Permission.ADMINISTRATOR)
                         ),
-                Commands.slash("refresh-roster", "[ADMIN] Refresh the roster according to the database")
+                Commands.slash("refresh-roster", "[ADMIN] Refresh the roster according to the database"),
+                Commands.slash("teams-json", "[ADMIN] Get all Teams in JSON format for personal view"),
+                Commands.slash("free-agents-json", "[ADMIN] Get all Teams in JSON format for personal view")
         ).queue();
     }
 
@@ -101,6 +103,8 @@ public class CommandInitializer extends ListenerAdapter {
                     case "disband-team" -> new AdminLeagueRegistration(event).disbandTeam();
                     case "create-team" -> new AdminLeagueRegistration(event).createTeam();
                     case "refresh-roster" ->  new AdminLeagueRegistration(event).refreshRoster();
+                    case "teams-json" ->  new AdminLeagueRegistration(event).teamsToJson();
+                    case "free-agents-json" ->  new AdminLeagueRegistration(event).faToJson();
                 }
             }
         }

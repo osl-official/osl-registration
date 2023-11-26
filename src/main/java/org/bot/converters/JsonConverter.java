@@ -10,10 +10,12 @@ import org.bot.models.Team;
 import org.bot.models.TeamDTO;
 
 import java.io.*;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.OptionalInt;
+import java.util.function.IntSupplier;
 
 public class JsonConverter {
     private final String TEMPLATE_NAME = "team-template.json";
@@ -51,5 +53,68 @@ public class JsonConverter {
         String json = gson.toJson(teamDTO);
 
         return FileUpload.fromData(new ByteArrayInputStream(json.getBytes()), TEMPLATE_NAME);
+    }
+
+    public FileUpload getTeamsToJson() {
+        try {
+            Database database = new Database();
+
+            Iterable<Team> teams = database.getTakenTeamModels();
+            List<TeamDTO> teamDTOS = new ArrayList<>();
+
+            for (Team team : teams) {
+                TeamDTO teamDTO = new TeamDTO();
+                teamDTO.setTeamName(team.name());
+                teamDTO.setTeamId(team.nameAbbr());
+                PlayerDTO captain = new PlayerDTO(team.captain().discordId(),
+                        team.captain().slapId().orElse(0)
+                );
+                teamDTO.setCaptain(captain);
+                teamDTO.setLeague(team.league().label);
+
+                List<PlayerDTO> players = playerListToPlayerDtoList(team.players());
+                teamDTO.setPlayers(players);
+                teamDTOS.add(teamDTO);
+            }
+
+            Gson gson = new GsonBuilder().setPrettyPrinting().create();
+            String json = gson.toJson(teamDTOS);
+
+            return FileUpload.fromData(new ByteArrayInputStream(json.getBytes()), "teams.json");
+
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public FileUpload getFreeAgentsToJson() {
+        try {
+            Database database = new Database();
+
+            List<Player> freeAgents = database.getFreeAgents();
+
+            Gson gson = new GsonBuilder().setPrettyPrinting().create();
+            String json = gson.toJson(playerListToPlayerDtoList(freeAgents));
+
+            return FileUpload.fromData(new ByteArrayInputStream(json.getBytes()), "freeAgents.json");
+
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private List<PlayerDTO> playerListToPlayerDtoList(List<Player> players) {
+        List<PlayerDTO> playerDtos = new ArrayList<>();
+        for (Player player : players) {
+            PlayerDTO playerDTO = new PlayerDTO();
+            if (player.league() != null) {
+                playerDTO.setLeague(player.league().label);
+            }
+            playerDTO.setDiscordId(player.discordId());
+            playerDTO.setSlapId(player.slapId().orElse(0));
+            playerDtos.add(playerDTO);
+        }
+
+        return playerDtos;
     }
 }

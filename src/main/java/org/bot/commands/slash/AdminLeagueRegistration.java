@@ -6,6 +6,7 @@ import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import org.bot.converters.Config;
 import org.bot.converters.Database;
+import org.bot.converters.JsonConverter;
 import org.bot.models.Player;
 import org.bot.scripts.RegistrationMessage;
 import org.bot.scripts.ReplyEphemeral;
@@ -141,5 +142,23 @@ public class AdminLeagueRegistration {
         roster.refreshRoster();
 
         replyEphemeral.sendThenDelete("Updating the roster now, this may take a minute", 10, TimeUnit.SECONDS);
+    }
+
+    public void faToJson() {
+        JsonConverter jsonConverter = new JsonConverter();
+
+        event.reply("All current free agents stored in the database.")
+                .setEphemeral(true)
+                .addFiles(jsonConverter.getFreeAgentsToJson())
+                .queue();
+    }
+
+    public void teamsToJson() {
+        JsonConverter jsonConverter = new JsonConverter();
+
+        event.reply("All current teams stored in the database.")
+                .setEphemeral(true)
+                .addFiles(jsonConverter.getTeamsToJson())
+                .queue();
     }
 }

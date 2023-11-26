@@ -9,10 +9,11 @@ import java.util.List;
 import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class JsonConverterTests {
     @Test
-    void jsonToTeamTest_validTeam() throws IOException {
+    void jsonToTeamTest_validTeamJson() throws IOException {
         Player captain = new Player(1L, 2);
         List<Player> players = new ArrayList<>();
         Player player = new Player(2L, 0);
@@ -31,5 +32,25 @@ public class JsonConverterTests {
         Team actual = jsonConverter.jsonToTeam(json.toString());
 
         assertEquals(expectedTeam, actual);
+    }
+
+    @Test
+    void jsonToTeamTest_invalidTeamJson() throws IOException {
+        Player captain = new Player(1L, 2);
+        List<Player> players = new ArrayList<>();
+        Player player = new Player(2L, 0);
+        players.add(player);
+        players.add(player);
+        Team expectedTeam = new Team(captain, players, "Team Name", "TN");
+
+
+        StringBuilder json = new StringBuilder();
+        json.append("{ \"teamName\": \"No").append("\", \"teamId\": \"")
+                .append(expectedTeam.nameAbbr()).append("\", \"captain\": { \"discordId\": 1, \"slapId\": 2 }, ")
+                .append("\"players\": [ { \"discordId\": 2, \"slapId\": 0 }, { \"discordId\": 2, \"slapId\": 0 } ] }");
+
+        JsonConverter jsonConverter = new JsonConverter();
+
+        assertThrows(IllegalArgumentException.class, () -> jsonConverter.jsonToTeam(json.toString()).getClass());
     }
 }
