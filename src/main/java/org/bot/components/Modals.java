@@ -5,9 +5,11 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.api.interactions.commands.Command;
 import org.bot.converters.Database;
 import org.bot.models.Player;
 import org.bot.models.Team;
+import org.bot.scripts.CommandLogger;
 import org.bot.scripts.RegistrationMessage;
 import org.bot.scripts.ReplyEphemeral;
 import org.bot.scripts.Roles;
@@ -23,6 +25,7 @@ public class Modals extends ListenerAdapter {
 
     @Override
     public void onModalInteraction(ModalInteractionEvent event) {
+        CommandLogger commandLogger  = new CommandLogger();
         switch (event.getModalId()) {
             case "confirm-fa" -> {
                 if (!event.getValue("confirm").getAsString().equalsIgnoreCase("confirm")) {
@@ -50,6 +53,8 @@ public class Modals extends ListenerAdapter {
                                 log.info("Ephemeral Message was dealt with before auto delete.");
                             }
                         });
+                commandLogger.recordNewRequest(event.getUser().getIdLong(), "free-agent",
+                        event.getTimeCreated().toEpochSecond());
             }
             case "new-team" -> {
                 Database database = new Database();
@@ -108,6 +113,8 @@ public class Modals extends ListenerAdapter {
                                     log.info("Ephemeral Message was dealt with before auto delete.");
                                 }
                             });
+                    commandLogger.recordNewRequest(event.getUser().getIdLong(), "team",
+                            event.getTimeCreated().toEpochSecond());
                 } catch (IllegalArgumentException e) {
                     event.reply(e.getLocalizedMessage()).setEphemeral(true)
                             .submit()

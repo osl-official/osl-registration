@@ -31,8 +31,9 @@ public class CommandInitializer extends ListenerAdapter {
                         .addOption(OptionType.USER, "player3", "Player 3", false)
                         .addOption(OptionType.USER, "player4", "Player 4", false),
                 Commands.slash("team-template", "Get a JSON template of a Team Object"),
-                Commands.slash("register-team-upload", "Upload a JSON file containing your new Teams details")
-                        .addOption(OptionType.ATTACHMENT, "json", "Your teams JSON file", true),
+                Commands.slash("register-team-upload", "Upload a JSON file containing your new Teams details. EXPERIMENTAL")
+                        .addOption(OptionType.ATTACHMENT, "json", "Your teams JSON file", true)
+                        .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.ADMINISTRATOR)),
 
                 // ADMIN COMMANDS
                 Commands.slash("remove-fa", "[ADMIN] Remove Free Agent")
@@ -70,21 +71,6 @@ public class CommandInitializer extends ListenerAdapter {
 
     @Override
     public void onSlashCommandInteraction(@NotNull SlashCommandInteractionEvent event) {
-        ReplyEphemeral replyEphemeral = new ReplyEphemeral(event);
-        CommandLogger commandLogger = new CommandLogger();
-
-        int interval = 2;
-        TimeUnit timeUnit = TimeUnit.MINUTES;
-
-        if (commandLogger.usedCommandWithinTimeFrame(event, interval, timeUnit) &&
-                !Objects.requireNonNull(Objects.requireNonNull(event.getGuild()).getMember(event.getUser()))
-                        .hasPermission(Permission.ADMINISTRATOR)) {
-            replyEphemeral.sendThenDelete("Command Cool Down! Please wait " + interval + " " + timeUnit +
-                            " before using that command again",
-                    MESSAGE_TIMEOUT, TimeUnit.SECONDS);
-        }
-
-        commandLogger.recordCommand(event);
         String name = event.getName();
         switch (name.toLowerCase()) {
             case "register-fa" -> new LeagueRegistration(event).registerFreeAgentEvent();

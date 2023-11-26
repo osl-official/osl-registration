@@ -15,6 +15,7 @@ import org.bot.converters.EmbedConverter;
 import org.bot.enums.League;
 import org.bot.models.Player;
 import org.bot.models.Team;
+import org.bot.scripts.CommandLogger;
 import org.bot.scripts.Registration;
 import org.bot.scripts.RegistrationMessage;
 import org.bot.scripts.Roles;
@@ -34,7 +35,7 @@ public class SelectMenus extends ListenerAdapter {
 
     @Override
     public void onStringSelectInteraction(StringSelectInteractionEvent event) {
-
+        CommandLogger commandLogger = new CommandLogger();
         switch (Objects.requireNonNull(event.getSelectMenu().getId())){
             case "choose-team" -> {
                 if (event.getSelectedOptions().get(0).getValue().equalsIgnoreCase("NEW")) {
@@ -76,6 +77,8 @@ public class SelectMenus extends ListenerAdapter {
                                 log.info("Ephemeral Message was dealt with before auto delete.");
                             }
                         });
+                commandLogger.recordNewRequest(event.getUser().getIdLong(), "team",
+                        event.getTimeCreated().toEpochSecond());
             }
             case "league-selector" -> {
                 boolean isFreeAgentApproval = event.getMessage().getEmbeds().get(0).getTitle().contains("Free Agent");
@@ -98,12 +101,13 @@ public class SelectMenus extends ListenerAdapter {
 
                     registration.assignFreeAgent(Long.parseLong(discordID),
                             League.valueOf(event.getSelectedOptions().get(0).getLabel().toUpperCase()));
-
+                    commandLogger.removeRequest(event.getUser().getId(), "free-agent");
                 } else {
                     MessageEmbed messageEmbed = event.getMessage().getEmbeds().get(0);
 
                     registration.registerTeam(new EmbedConverter(messageEmbed).getTeamFromEmbed(),
                             event.getSelectedOptions().get(0).getLabel());
+                    commandLogger.removeRequest(event.getUser().getId(), "team");
                 }
             }
         }

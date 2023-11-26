@@ -1,0 +1,1 @@
+DiscordId, RequestType, EpochTime

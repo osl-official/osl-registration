@@ -15,6 +15,7 @@ import net.dv8tion.jda.api.utils.FileUpload;
 import org.bot.converters.Database;
 import org.bot.converters.JsonConverter;
 import org.bot.models.Team;
+import org.bot.scripts.CommandLogger;
 import org.bot.scripts.RegistrationMessage;
 import org.bot.scripts.ReplyEphemeral;
 import org.bot.scripts.Roles;
@@ -32,6 +33,7 @@ import java.util.concurrent.TimeUnit;
 public class LeagueRegistration {
     private final int MESSAGE_TIMEOUT = 10;
     private final Database DATABASE = new Database();
+    private final CommandLogger COMMAND_LOGGER = new CommandLogger();
     private ReplyEphemeral replyEphemeral;
     private SlashCommandInteractionEvent event;
 
@@ -42,6 +44,13 @@ public class LeagueRegistration {
 
     public void registerFreeAgentEvent() {
         try {
+            if (COMMAND_LOGGER.checkPendingRequest(event.getUser().getIdLong(), "free-agent")) {
+                replyEphemeral.sendThenDelete(
+                        "You already have a Free Agent request. Contact a **League Coordinator** if you believe this to be wrong",
+                        MESSAGE_TIMEOUT, TimeUnit.SECONDS
+                );
+                return;
+            }
             if (DATABASE.isFreeAgent(event.getUser().getIdLong())) {
                 replyEphemeral.sendThenDelete(
                         "You are already a Free Agent contact a **League Coordinator** if you believe this to be wrong",
@@ -73,13 +82,18 @@ public class LeagueRegistration {
     }
 
     public void registerTeamEvent() {
-        Database database = new Database();
-        replyEphemeral = new ReplyEphemeral(event);
         List<OptionMapping> players = event.getOptionsByType(OptionType.USER);
         StringBuilder sb = new StringBuilder();
+        if (COMMAND_LOGGER.checkPendingRequest(event.getUser().getIdLong(), "team")) {
+            replyEphemeral.sendThenDelete(
+                    "You already have a Team request. Contact a **League Coordinator** if you believe this to be wrong",
+                    MESSAGE_TIMEOUT, TimeUnit.SECONDS
+            );
+            return;
+        }
 
         try {
-            if (database.isInTeam(event.getUser().getIdLong())) {
+            if (DATABASE.isInTeam(event.getUser().getIdLong())) {
                 replyEphemeral.sendThenDelete(
                         "You are already in a team.",
                         MESSAGE_TIMEOUT, TimeUnit.SECONDS
@@ -114,7 +128,7 @@ public class LeagueRegistration {
             }
 
             try {
-                if (database.isInTeam(player.getAsUser().getIdLong())) {
+                if (DATABASE.isInTeam(player.getAsUser().getIdLong())) {
                     sb.append(player.getAsUser().getAsMention()).append(System.lineSeparator());
                 }
             } catch (SQLException e) {
@@ -130,7 +144,7 @@ public class LeagueRegistration {
 
         List<HashMap<String, String>> teams;
         try {
-            teams = database.getTeamsNotTaken();
+            teams = DATABASE.getTeamsNotTaken();
 
             StringSelectMenu.Builder teamsSelectMenu = StringSelectMenu.create("choose-team")
                     .addOption("Create New Team", "new");
@@ -189,6 +203,14 @@ public class LeagueRegistration {
         if (!file.getFileExtension().equalsIgnoreCase("json")) {
             replyEphemeral.sendThenDelete("Invalid file type. Please upload a .json file instead.",
                     10, TimeUnit.SECONDS);
+            return;
+        }
+
+        if (COMMAND_LOGGER.checkPendingRequest(event.getUser().getIdLong(), "team")) {
+            replyEphemeral.sendThenDelete(
+                    "You already have a Team request. Contact a **League Coordinator** if you believe this to be wrong",
+                    MESSAGE_TIMEOUT, TimeUnit.SECONDS
+            );
             return;
         }
 

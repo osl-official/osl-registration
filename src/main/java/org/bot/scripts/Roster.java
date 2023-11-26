@@ -164,9 +164,6 @@ public class Roster {
             if (Objects.requireNonNull(field.getName()).equalsIgnoreCase(league.label)) {
                 StringBuilder sb = new StringBuilder();
                 sb.append(field.getValue());
-
-                System.out.println("---" + sb + "---");
-                System.out.println(sb.length());
                 if (Objects.requireNonNull(field.getValue()).length() > 1) {
                     sb.append(System.lineSeparator());
                 }
@@ -225,7 +222,6 @@ public class Roster {
                         for (String id : field.getValue().split(System.lineSeparator())) {
                             if (id.length() > 1) {
                                 long idLong = Long.parseLong(id.replaceAll("[^\\d]", ""));
-                                System.out.println(idLong);
                                 removeFromRoster(idLong);
                             }
                         }

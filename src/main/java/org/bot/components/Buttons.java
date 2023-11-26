@@ -6,6 +6,7 @@ import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import org.bot.converters.Database;
+import org.bot.scripts.CommandLogger;
 import org.bot.scripts.Roles;
 import org.bot.scripts.Roster;
 import org.bot.scripts.TeamChannel;
@@ -23,13 +24,21 @@ public class Buttons extends ListenerAdapter {
         MessageEmbed messageEmbed = event.getMessage().getEmbeds().get(0);
 
         switch (Objects.requireNonNull(event.getButton().getId())) {
-            case "deny" -> event.getMessage().editMessageEmbeds(new EmbedBuilder(messageEmbed)
-                            .setColor(Color.RED)
-                            .addField("Verdict", "Denied by " + event.getUser().getAsMention()
-                                    + " at <t:" + Instant.now().getEpochSecond() + ":f>", false)
-                            .build())
-                    .setComponents()
-                    .queue();
+            case "deny" -> {
+                CommandLogger commandLogger = new CommandLogger();
+                event.getMessage().editMessageEmbeds(new EmbedBuilder(messageEmbed)
+                                .setColor(Color.RED)
+                                .addField("Verdict", "Denied by " + event.getUser().getAsMention()
+                                        + " at <t:" + Instant.now().getEpochSecond() + ":f>", false)
+                                .build())
+                        .setComponents()
+                        .queue();
+                if (event.getMessage().getEmbeds().get(0).getTitle().contains("Free Agent")) {
+                    commandLogger.removeRequest(event.getUser().getId(), "free-agent");
+                } else {
+                    commandLogger.removeRequest(event.getUser().getId(), "team");
+                }
+            }
             case "approve" -> {
                 event.getMessage().editMessageEmbeds(new EmbedBuilder(messageEmbed)
                                 .setColor(Color.GREEN)

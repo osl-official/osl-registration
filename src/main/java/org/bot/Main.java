@@ -48,22 +48,6 @@ public class Main {
             jda.getPresence().setStatus(OnlineStatus.ONLINE);
             jda.getPresence().setActivity(Activity.playing("Slapshot: Rebound"));
 
-            Thread thread = new Thread() {
-                @Override
-                public void run() {
-                    CommandLogger commandLogger = new CommandLogger();
-                    while (true) {
-                        try {
-                            Thread.sleep(1000*60*60);
-                            commandLogger.removeOldLogs(1, TimeUnit.HOURS);
-                        } catch (InterruptedException e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-                }
-            };
-            thread.start();
-
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 log.info("Cleaning up...");
                 jda.shutdownNow(); // Shutdown the JDA instance

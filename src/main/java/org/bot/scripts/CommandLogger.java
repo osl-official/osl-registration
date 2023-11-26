@@ -13,17 +13,17 @@ public class CommandLogger {
     private final String PATH = "src/main/resources/command-logs.txt";
     private final char SEPARATOR = ',';
 
-    public void recordCommand(SlashCommandInteractionEvent event) {
+    public void recordNewRequest(long discordId, String requestType, long epochTime) {
         try {
             @Cleanup FileWriter fileWriter = new FileWriter(PATH, true);
 
             StringBuilder stringBuilder = new StringBuilder();
 
-            stringBuilder.append(event.getName())
+            stringBuilder.append(discordId)
                     .append(SEPARATOR)
-                    .append(event.getUser().getId())
+                    .append(requestType)
                     .append(SEPARATOR)
-                    .append(event.getTimeCreated().toEpochSecond())
+                    .append(epochTime)
                     .append(System.lineSeparator());
 
             fileWriter.append(stringBuilder.toString());
@@ -42,15 +42,12 @@ public class CommandLogger {
         }
     }
 
-    public boolean usedCommandWithinTimeFrame(SlashCommandInteractionEvent event, int interval, TimeUnit timeUnit) {
-        return getCommandHistory().stream().filter(s -> s.contains(event.getUser().getId()))
-                .filter(s -> s.contains(event.getName()))
-                .anyMatch(s ->
-                        Long.parseLong(s.split(String.valueOf(SEPARATOR))[2]) + timeUnit.toSeconds(interval) >
-                                event.getTimeCreated().toEpochSecond());
+    public boolean checkPendingRequest(long discordId, String requestType) {
+        return getCommandHistory().stream().filter(s -> s.contains(String.valueOf(discordId)))
+                .anyMatch(s -> s.contains(requestType));
     }
 
-    public void removeOldLogs(int interval, TimeUnit timeUnit) {
+    public void removeRequest(String discordId, String requestType) {
         Collection<String> history = getCommandHistory();
         purgeLogs();
 
@@ -60,16 +57,14 @@ public class CommandLogger {
             StringBuilder stringBuilder = new StringBuilder();
 
             for (String line : history) {
-                if (!line.equalsIgnoreCase("Command, DiscordID, EpochTime")) {
-                    if (Long.parseLong(line.split(",")[2]) >
-                            OffsetDateTime.now().toEpochSecond() - timeUnit.toSeconds(interval)) {
-                        stringBuilder.append(line).append("\n");
+                if (!line.equalsIgnoreCase("DiscordId, RequestType, EpochTime")) {
+                    if (!line.contains(discordId) || !line.contains(requestType)) {
+                        stringBuilder.append(line).append(System.lineSeparator());
                     }
                 }
             }
 
             fileWriter.append(stringBuilder.toString());
-            System.out.println("purged");
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -79,7 +74,7 @@ public class CommandLogger {
         try {
             @Cleanup FileWriter fileWriter = new FileWriter(PATH, false);
 
-            fileWriter.append("Command, DiscordID, EpochTime").append(System.lineSeparator());
+            fileWriter.append("DiscordId, RequestType, EpochTime").append(System.lineSeparator());
 
         } catch (IOException e) {
             throw new RuntimeException(e);
