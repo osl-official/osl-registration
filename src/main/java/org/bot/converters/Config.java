@@ -21,9 +21,6 @@ public class Config {
         return null;
     }
 
-    public String getToken() {
-        return String.valueOf(getYaml().get("token"));
-    }
     public String getFaRegistrationChannel() {
         return String.valueOf(getYaml().get("fa-registration"));
     }

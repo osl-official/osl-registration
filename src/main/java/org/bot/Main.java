@@ -9,18 +9,11 @@ import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.utils.ChunkingFilter;
 import net.dv8tion.jda.api.utils.MemberCachePolicy;
 import org.bot.commands.slash.CommandInitializer;
-import org.bot.commands.slash.AdminLeagueRegistration;
-import org.bot.commands.slash.LeagueRegistration;
 import org.bot.components.Buttons;
 import org.bot.components.Modals;
 import org.bot.components.SelectMenus;
 import org.bot.converters.Config;
-import org.bot.scripts.CommandLogger;
-
-import java.sql.Time;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.concurrent.TimeUnit;
+import org.bot.scripts.MessageListener;
 
 @Slf4j
 public class Main {
@@ -29,7 +22,7 @@ public class Main {
 
     public static void main(String[] args) {
         try {
-            jda = JDABuilder.createDefault(config.getToken())
+            jda = JDABuilder.createDefault(args[0])
                     .enableIntents(GatewayIntent.MESSAGE_CONTENT) // enables explicit access to message.getContentDisplay()
                     .enableIntents(GatewayIntent.GUILD_MEMBERS)
                     .setChunkingFilter(ChunkingFilter.ALL)
@@ -39,7 +32,8 @@ public class Main {
                             new CommandInitializer(),
                             new SelectMenus(),
                             new Buttons(),
-                            new Modals())
+                            new Modals(),
+                            new MessageListener())
                     .build();
 
             jda.awaitReady();
