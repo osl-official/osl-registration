@@ -19,12 +19,14 @@ public class TeamChannel {
             guild.getTextChannelsByName(teamName.replace(" ", "-"), true).forEach(ch -> {
                 ch.upsertPermissionOverride(guild.getPublicRole()).setDenied(Permission.VIEW_CHANNEL).setAllowed().queue();
                 ch.upsertPermissionOverride(new Roles(guild).getRole(teamName)).setAllowed(Permission.VIEW_CHANNEL).queue();
+                ch.upsertPermissionOverride(guild.getSelfMember()).setAllowed(Permission.MANAGE_CHANNEL).setAllowed(Permission.VIEW_CHANNEL).queue();
             });
         } else {
             guild.getCategoriesByName(league.name() + " League", true).forEach(
                     category -> guild.createTextChannel(teamName, category)
                             .addPermissionOverride(guild.getPublicRole(), null, EnumSet.of(Permission.VIEW_CHANNEL))
                             .addPermissionOverride(new Roles(guild).getRole(teamName), EnumSet.of(Permission.VIEW_CHANNEL), null)
+                            .addPermissionOverride(guild.getSelfMember(), EnumSet.of(Permission.MANAGE_CHANNEL, Permission.VIEW_CHANNEL), null)
                             .queue()
             );
         }
@@ -35,12 +37,14 @@ public class TeamChannel {
             guild.getVoiceChannelsByName(teamName, true).forEach(ch -> {
                 ch.upsertPermissionOverride(guild.getPublicRole()).setDenied(Permission.VIEW_CHANNEL).setAllowed().queue();
                 ch.upsertPermissionOverride(new Roles(guild).getRole(teamName)).setAllowed(Permission.VIEW_CHANNEL).queue();
+                ch.upsertPermissionOverride(guild.getSelfMember()).setAllowed(Permission.MANAGE_CHANNEL).setAllowed(Permission.VIEW_CHANNEL).queue();
             });
         } else {
             guild.getCategoriesByName(league.name() + " League", true).forEach(
                     category -> guild.createVoiceChannel(teamName, category)
                             .addPermissionOverride(guild.getPublicRole(), null, EnumSet.of(Permission.VIEW_CHANNEL))
                             .addPermissionOverride(new Roles(guild).getRole(teamName), EnumSet.of(Permission.VIEW_CHANNEL), null)
+                            .addPermissionOverride(guild.getSelfMember(), EnumSet.of(Permission.MANAGE_CHANNEL, Permission.VIEW_CHANNEL), null)
                             .queue()
             );
         }
