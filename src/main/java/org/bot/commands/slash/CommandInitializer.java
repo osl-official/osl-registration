@@ -71,7 +71,7 @@ public class CommandInitializer extends ListenerAdapter {
                         .setDefaultPermissions(
                                 DefaultMemberPermissions.enabledFor(Permission.ADMINISTRATOR)
                         ),
-                Commands.slash("free-agents-json", "[ADMIN] Get all Teams in JSON format for personal view")
+                Commands.slash("free-agents-json", "[ADMIN] Get all Free Agents in JSON format for personal view")
                         .setDefaultPermissions(
                                 DefaultMemberPermissions.enabledFor(Permission.ADMINISTRATOR)
                         ),
