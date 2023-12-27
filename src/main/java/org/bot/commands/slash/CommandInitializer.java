@@ -34,6 +34,7 @@ public class CommandInitializer extends ListenerAdapter {
                 Commands.slash("register-team-upload", "Upload a JSON file containing your new Teams details. EXPERIMENTAL")
                         .addOption(OptionType.ATTACHMENT, "json", "Your teams JSON file", true)
                         .setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.ADMINISTRATOR)),
+                Commands.slash("help", "Help on how to use the bot"),
 
                 // ADMIN COMMANDS
                 Commands.slash("remove-fa", "[ADMIN] Remove Free Agent")
@@ -92,6 +93,7 @@ public class CommandInitializer extends ListenerAdapter {
             case "register-team" -> new LeagueRegistration(event).registerTeamEvent();
             case "team-template" -> new LeagueRegistration(event).teamTemplateEvent();
             case "register-team-upload" -> new LeagueRegistration(event).teamTemplateUploadEvent();
+            case "help" -> new MiscCommands(event).help();
 
             default -> {
                 if (!Objects.requireNonNull(Objects.requireNonNull(event.getGuild()).getMember(event.getUser()))

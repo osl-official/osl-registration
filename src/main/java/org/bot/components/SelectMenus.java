@@ -142,6 +142,13 @@ public class SelectMenus extends ListenerAdapter {
                     log.error(e.getLocalizedMessage());
                 }
             }
+            case "help-options" -> {
+                HelpEmbed helpEmbed = new HelpEmbed(Integer.parseInt(event.getSelectedOptions().get(0).getValue()));
+
+                event.editMessageEmbeds(helpEmbed.getHelpMessageEmbed())
+                        .setComponents(ActionRow.of(helpEmbed.getSelectMenu()))
+                        .submit();
+            }
         }
     }
 }
