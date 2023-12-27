@@ -22,7 +22,7 @@ public record Team(Player captain, List<Player> players, String name, String nam
         if (players.size() + 1 > 5) {
             throw new IllegalArgumentException("Teams require a maximum of 5 players including the captain.");
         }
-        if (nameAbbr.length() > 3) {
+        if (nameAbbr.length() > 4) {
             throw new IllegalArgumentException("Team Name Abbreviation must not be more than 4 characters long.");
         }
         if (nameAbbr.isEmpty()) {
