@@ -5,12 +5,10 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.api.interactions.components.ActionRow;
 import net.dv8tion.jda.api.utils.FileUpload;
 import org.bot.converters.Database;
-import org.bot.scripts.CommandLogger;
-import org.bot.scripts.Roles;
-import org.bot.scripts.Roster;
-import org.bot.scripts.TeamChannel;
+import org.bot.scripts.*;
 
 import java.awt.*;
 import java.io.File;
@@ -104,6 +102,26 @@ public class Buttons extends ListenerAdapter {
                         log.error(e.getLocalizedMessage());
                     }
                 }
+            }
+            case "page-prev" -> {
+                DatabaseEmbed databaseEmbed = new DatabaseEmbed(messageEmbed.getFields().get(0).getValue(),
+                        Integer.parseInt(messageEmbed.getFields().get(1).getValue()) - 1);
+
+                event.editMessageEmbeds(databaseEmbed.getDatabaseEmbed())
+                        .setComponents(ActionRow.of(databaseEmbed.getTableSelectMenu()),
+                                ActionRow.of(databaseEmbed.getDeleteSelectMenu()),
+                                databaseEmbed.getPageButtons())
+                        .submit();
+            }
+            case "page-next" -> {
+                DatabaseEmbed databaseEmbed = new DatabaseEmbed(messageEmbed.getFields().get(0).getValue(),
+                        Integer.parseInt(messageEmbed.getFields().get(1).getValue()) + 1);
+
+                event.editMessageEmbeds(databaseEmbed.getDatabaseEmbed())
+                        .setComponents(ActionRow.of(databaseEmbed.getTableSelectMenu()),
+                                ActionRow.of(databaseEmbed.getDeleteSelectMenu()),
+                                databaseEmbed.getPageButtons())
+                        .submit();
             }
         }
     }

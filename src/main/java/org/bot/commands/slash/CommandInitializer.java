@@ -63,9 +63,24 @@ public class CommandInitializer extends ListenerAdapter {
                         .setDefaultPermissions(
                                 DefaultMemberPermissions.enabledFor(Permission.ADMINISTRATOR)
                         ),
-                Commands.slash("refresh-roster", "[ADMIN] Refresh the roster according to the database"),
-                Commands.slash("teams-json", "[ADMIN] Get all Teams in JSON format for personal view"),
+                Commands.slash("refresh-roster", "[ADMIN] Refresh the roster according to the database")
+                        .setDefaultPermissions(
+                                DefaultMemberPermissions.enabledFor(Permission.ADMINISTRATOR)
+                        ),
+                Commands.slash("teams-json", "[ADMIN] Get all Teams in JSON format for personal view")
+                        .setDefaultPermissions(
+                                DefaultMemberPermissions.enabledFor(Permission.ADMINISTRATOR)
+                        ),
                 Commands.slash("free-agents-json", "[ADMIN] Get all Teams in JSON format for personal view")
+                        .setDefaultPermissions(
+                                DefaultMemberPermissions.enabledFor(Permission.ADMINISTRATOR)
+                        ),
+
+                // CRUD Commands
+                Commands.slash("view-database", "[ADMIN] View the database in an Embed")
+                        .setDefaultPermissions(
+                                DefaultMemberPermissions.enabledFor(Permission.ADMINISTRATOR)
+                        )
         ).queue();
     }
 
@@ -91,6 +106,7 @@ public class CommandInitializer extends ListenerAdapter {
                     case "refresh-roster" ->  new AdminLeagueRegistration(event).refreshRoster();
                     case "teams-json" ->  new AdminLeagueRegistration(event).teamsToJson();
                     case "free-agents-json" ->  new AdminLeagueRegistration(event).faToJson();
+                    case "view-database" ->  new AdminLeagueRegistration(event).viewDatabase();
                 }
             }
         }

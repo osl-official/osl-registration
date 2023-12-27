@@ -6,6 +6,7 @@ import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.api.interactions.components.ActionRow;
 import net.dv8tion.jda.api.interactions.components.text.TextInput;
 import net.dv8tion.jda.api.interactions.components.text.TextInputStyle;
 import net.dv8tion.jda.api.interactions.modals.Modal;
@@ -16,10 +17,7 @@ import org.bot.converters.EmbedConverter;
 import org.bot.enums.League;
 import org.bot.models.Player;
 import org.bot.models.Team;
-import org.bot.scripts.CommandLogger;
-import org.bot.scripts.Registration;
-import org.bot.scripts.RegistrationMessage;
-import org.bot.scripts.Roles;
+import org.bot.scripts.*;
 
 import java.awt.Color;
 import java.io.File;
@@ -112,6 +110,36 @@ public class SelectMenus extends ListenerAdapter {
                     registration.registerTeam(new EmbedConverter(messageEmbed).getTeamFromEmbed(),
                             event.getSelectedOptions().get(0).getLabel());
                     commandLogger.removeRequest(event.getUser().getId(), "team");
+                }
+            }
+            case "table-names" -> {
+                DatabaseEmbed databaseEmbed = new DatabaseEmbed(event.getSelectedOptions().get(0).getLabel());
+
+                event.editMessageEmbeds(databaseEmbed.getDatabaseEmbed())
+                        .setComponents(ActionRow.of(databaseEmbed.getTableSelectMenu()),
+                                ActionRow.of(databaseEmbed.getDeleteSelectMenu()),
+                                databaseEmbed.getPageButtons())
+                        .submit();
+            }
+            case "delete-row" -> {
+                try {
+                    MessageEmbed messageEmbed = event.getMessage().getEmbeds().get(0);
+
+                    Database database = new Database();
+                    database.deleteRow(messageEmbed.getFields().get(0).getValue(),
+                            Integer.parseInt(event.getSelectedOptions().get(0).getValue()));
+
+
+                    DatabaseEmbed databaseEmbed = new DatabaseEmbed(messageEmbed.getFields().get(0).getValue(),
+                            Integer.parseInt(messageEmbed.getFields().get(1).getValue()));
+
+                    event.editMessageEmbeds(databaseEmbed.getDatabaseEmbed())
+                            .setComponents(ActionRow.of(databaseEmbed.getTableSelectMenu()),
+                                    ActionRow.of(databaseEmbed.getDeleteSelectMenu()),
+                                    databaseEmbed.getPageButtons())
+                            .submit();
+                } catch (SQLException e) {
+                    log.error(e.getLocalizedMessage());
                 }
             }
         }
