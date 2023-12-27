@@ -1,18 +1,20 @@
 package org.bot.commands.slash;
 
 import lombok.extern.slf4j.Slf4j;
+import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.interactions.components.ActionRow;
+import net.dv8tion.jda.api.interactions.components.selections.SelectMenu;
+import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
 import org.bot.converters.Config;
 import org.bot.converters.Database;
 import org.bot.converters.JsonConverter;
 import org.bot.models.Player;
-import org.bot.scripts.RegistrationMessage;
-import org.bot.scripts.ReplyEphemeral;
-import org.bot.scripts.Roles;
-import org.bot.scripts.Roster;
+import org.bot.scripts.*;
 
+import java.awt.*;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
@@ -160,5 +162,22 @@ public class AdminLeagueRegistration {
                 .setEphemeral(true)
                 .addFiles(jsonConverter.getTeamsToJson())
                 .queue();
+    }
+
+    public void viewDatabase() {
+        DatabaseEmbed databaseEmbed = new DatabaseEmbed();
+
+        event.replyEmbeds(databaseEmbed.getDatabaseEmbed())
+                .setEphemeral(true)
+                .setComponents(ActionRow.of(databaseEmbed.getTableSelectMenu()),
+                        ActionRow.of(databaseEmbed.getDeleteSelectMenu()),
+                        databaseEmbed.getPageButtons())
+                .submit()
+                .thenCompose(me -> me.deleteOriginal().submitAfter(5, TimeUnit.MINUTES))
+                .whenComplete((success, error) -> {
+                    if (error != null) {
+                        log.info("Ephemeral Message was dealt with before auto delete.");
+                    }
+                });
     }
 }

@@ -354,4 +354,132 @@ public class Database {
 
         return teams;
     }
+
+    public List<String> getTableNames() throws SQLException {
+        Connection connection = DriverManager.getConnection(DATABASE_URL);
+        List<String> tables = new ArrayList<>();
+
+        Statement statement = connection.createStatement();
+        statement.setQueryTimeout(10);
+
+        ResultSet resultSet = statement.executeQuery("SELECT\n" +
+                "    name\n" +
+                "FROM\n" +
+                "    sqlite_schema\n" +
+                "WHERE\n" +
+                "        type ='table' AND\n" +
+                "        name NOT LIKE 'sqlite_%';");
+
+
+        while (resultSet.next()) {
+            tables.add(resultSet.getString("name"));
+        }
+        connection.close();
+
+        return tables;
+    }
+
+    public int getEntryLength(String table) throws SQLException {
+        Connection connection = DriverManager.getConnection(DATABASE_URL);
+
+        Statement statement = connection.createStatement();
+        statement.setQueryTimeout(10);
+
+        ResultSet resultSet = statement.executeQuery("SELECT COUNT(*) FROM  " + table);
+
+        int count = 0;
+        while (resultSet.next()) {
+            count = resultSet.getInt(1);
+        }
+        connection.close();
+
+        return count;
+    }
+
+    public HashMap<String, List<String>> getTable(String tableName, int page) throws SQLException {
+        Connection connection = DriverManager.getConnection(DATABASE_URL);
+
+        Statement statement = connection.createStatement();
+        statement.setQueryTimeout(10);
+
+        ResultSet resultSet = statement.executeQuery("SELECT * FROM  " + tableName
+                + " LIMIT 10 OFFSET " + (page-1) * 10);
+        ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
+
+        int columnCount = resultSetMetaData.getColumnCount();
+
+        HashMap<String, List<String>> rows = new HashMap<>();
+
+        while (resultSet.next()) {
+            for (int i = 0; i < columnCount; i++) {
+                rows.putIfAbsent(resultSetMetaData.getColumnName(i + 1), new ArrayList<>());
+                if (resultSetMetaData.getColumnName(i + 1).equalsIgnoreCase("discordID") ||
+                        resultSetMetaData.getColumnName(i + 1).equalsIgnoreCase("captainID")) {
+                    rows.get(resultSetMetaData.getColumnName(i + 1))
+                            .add("<@" + resultSet.getString(i + 1) + ">");
+                } else {
+                    rows.get(resultSetMetaData.getColumnName(i + 1))
+                            .add(resultSet.getString(i + 1));
+                }
+            }
+        }
+
+        return rows;
+    }
+
+    public void deleteRow(String tableName, int rowIdx) throws SQLException {
+        String whereClause = getDeleteRowWhereClause(tableName, rowIdx);
+        String deleteQuery = "DELETE FROM " + tableName + " " + whereClause;
+        System.out.println(deleteQuery);
+
+        Connection connection = DriverManager.getConnection(DATABASE_URL);
+        PreparedStatement preparedStatement = connection
+                .prepareStatement(deleteQuery);
+        preparedStatement.execute();
+
+        preparedStatement.close();
+        connection.close();
+    }
+
+    private String getDeleteRowWhereClause(String tableName, int rowIdx) throws SQLException {
+        Connection connection = DriverManager.getConnection(DATABASE_URL);
+
+        Statement statement = connection.createStatement();
+        statement.setQueryTimeout(10);
+
+        ResultSet resultSet = statement.executeQuery("SELECT * FROM  " + tableName
+                + " LIMIT 1 OFFSET " + (rowIdx - 1));
+        ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
+        int columnCount = resultSetMetaData.getColumnCount();
+        StringBuilder whereClauseBuilder = new StringBuilder("WHERE ");
+
+        while (resultSet.next()) {
+            for (int i = 0; i < columnCount; i++) {
+                String columnName = resultSetMetaData.getColumnName(i + 1);
+                whereClauseBuilder.append(columnName)
+                        .append(" = ");
+                Object object = resultSet.getObject(i + 1);
+
+                if (object == null) {
+                    whereClauseBuilder.append(object)
+                            .append(" IS NULL");
+                } else if (object instanceof String) {
+                    whereClauseBuilder.append("'")
+                            .append(object)
+                            .append("'");
+                } else {
+                    whereClauseBuilder.append(object);
+                }
+
+                if (i + 1 != columnCount) {
+                    whereClauseBuilder.append(" AND ");
+                }
+            }
+        }
+
+        resultSet.close();
+        connection.close();
+
+        return whereClauseBuilder.toString();
+    }
 }
