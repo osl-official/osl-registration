@@ -15,6 +15,15 @@ A list of general pre-requisites to run the discord bot. A basic knowledge of ea
    fa-registration: 9999999999999999
    team-registration: 8888888888888
    roster-channel: 777777777777777
+   command-log-path: "C:/PATH/TO/command-logs.txt"
+   database-path: "C:/PATH/TO/teams.db"
+   
+   # To be used at a later date but must be included
+   season:
+    number: 18
+    dates:
+     start: '2023-12-20'
+     end: '2025-12-27'
    ```
 
 2. Run the appropriate Make command. The token variable is required and should be set to the discord token.

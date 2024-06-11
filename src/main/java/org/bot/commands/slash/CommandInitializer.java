@@ -9,16 +9,19 @@ import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
+import org.bot.converters.Config;
 import org.bot.scripts.CommandLogger;
 import org.bot.scripts.ReplyEphemeral;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.IOException;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
 public class CommandInitializer extends ListenerAdapter {
     private static final int MESSAGE_TIMEOUT = 5;
+    private static final int MILLISECOND_TO_SECOND = 1000;
 
     @Override
     public void onGuildReady(GuildReadyEvent event) {
@@ -88,13 +91,33 @@ public class CommandInitializer extends ListenerAdapter {
     @Override
     public void onSlashCommandInteraction(@NotNull SlashCommandInteractionEvent event) {
         String name = event.getName();
+        Config config = new Config();
+        long eventEpoch = event.getTimeCreated().toEpochSecond();
+        ReplyEphemeral replyEphemeral = new ReplyEphemeral(event);
+
+        System.out.println("event time: "+ eventEpoch);
+        System.out.println("start: " + config.getStartDate().getTime() / MILLISECOND_TO_SECOND);
+        System.out.println("end: " + config.getEndDate().getTime() / MILLISECOND_TO_SECOND);
+
+        //  Ensure you cant create and signup post season
+//        if (config.getStartDate().getTime() / MILLISECOND_TO_SECOND < eventEpoch && config.getEndDate().getTime() / MILLISECOND_TO_SECOND > eventEpoch) {
+//            switch (name.toLowerCase()) {
+//                case "register-fa" -> new LeagueRegistration(event).registerFreeAgentEvent();
+//                case "register-team" -> new LeagueRegistration(event).registerTeamEvent();
+//                case "register-team-upload" -> new LeagueRegistration(event).teamTemplateUploadEvent();
+//            }
+//        } else {
+//            switch (name.toLowerCase()) {
+//                case "register-fa", "register-team", "register-team-upload" ->
+//                        replyEphemeral.sendThenDelete("Registration is not available at this time.", 10, TimeUnit.SECONDS);
+//            }
+//        }
         switch (name.toLowerCase()) {
             case "register-fa" -> new LeagueRegistration(event).registerFreeAgentEvent();
             case "register-team" -> new LeagueRegistration(event).registerTeamEvent();
-            case "team-template" -> new LeagueRegistration(event).teamTemplateEvent();
             case "register-team-upload" -> new LeagueRegistration(event).teamTemplateUploadEvent();
             case "help" -> new MiscCommands(event).help();
-
+            case "team-template" -> new LeagueRegistration(event).teamTemplateEvent();
             default -> {
                 if (!Objects.requireNonNull(Objects.requireNonNull(event.getGuild()).getMember(event.getUser()))
                         .hasPermission(Permission.ADMINISTRATOR)) {

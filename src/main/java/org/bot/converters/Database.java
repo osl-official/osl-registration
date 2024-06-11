@@ -10,8 +10,8 @@ import java.util.*;
 
 @Slf4j
 public class Database {
-
-    private final String DATABASE_URL = "jdbc:sqlite:src/main/resources/teams.db";
+    private final String DATABASE_PATH = new Config().getDatabasePath();
+    private final String DATABASE_URL = "jdbc:sqlite:" + DATABASE_PATH;
 
     /**
      * Encloses a string in single quotations for SQL queries.

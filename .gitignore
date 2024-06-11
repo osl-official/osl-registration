@@ -1,5 +1,5 @@
-/src/main/resources/teams.db
 /target/
 /logsFile.log
 /src/main/resources/settings.yml
-/src/main/resources/command-logs.txt
+command-logs.txt
+teams.db

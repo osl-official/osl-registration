@@ -1,6 +1,8 @@
 package org.bot.scripts;
 
 import lombok.AllArgsConstructor;
+import lombok.Cleanup;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Guild;
@@ -11,6 +13,7 @@ import org.bot.models.Team;
 
 import java.awt.*;
 import java.io.File;
+import java.io.InputStream;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,6 +24,7 @@ import java.util.Objects;
 public class Registration {
     private Guild guild;
 
+    @SneakyThrows
     public void registerTeam(Team team, String league) {
         List<String> discordIDsList = new ArrayList<>();
         team.players().forEach(p -> discordIDsList.add(String.valueOf(p.discordId())));
@@ -62,7 +66,8 @@ public class Registration {
             teamChannel.addTeamVoiceChannel(team.name(), League.valueOf(league.toUpperCase()));
 
             EmbedBuilder embedBuilder = new EmbedBuilder();
-            File file = new File("src/main/resources/images/osl-logo.png");
+            @Cleanup InputStream inputStream = getClass().getResourceAsStream("/images/osl-logo.png");
+
             embedBuilder.setTitle("Oceanic Slapshot League Team Created")
                     .setDescription("Welcome to OSL's current season of **Slapshot:Rebound** :hockey:. Congratulations on " +
                                     "the successful registration of **" + team.name()+"** :star_struck:!! We welcome you aboard, " +
@@ -79,7 +84,7 @@ public class Registration {
                     .setFooter(guild.getSelfMember().getEffectiveName(), guild.getSelfMember().getEffectiveAvatarUrl());
 
             guild.getMemberById(team.captain().discordId()).getUser().openPrivateChannel()
-                    .queue(ch -> ch.sendMessageEmbeds(embedBuilder.build()).addFiles(FileUpload.fromData(file, "osl-logo.png")).queue());
+                    .queue(ch -> ch.sendMessageEmbeds(embedBuilder.build()).addFiles(FileUpload.fromData(inputStream, "osl-logo.png")).complete());
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }

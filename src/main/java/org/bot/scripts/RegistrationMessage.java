@@ -1,5 +1,7 @@
 package org.bot.scripts;
 
+import lombok.Cleanup;
+import lombok.SneakyThrows;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.MessageEmbed;
@@ -16,13 +18,14 @@ import org.bot.models.Team;
 
 import java.awt.*;
 import java.io.File;
+import java.io.InputStream;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
 public class RegistrationMessage {
-    private final File PENDING_IMG = new File("src/main/resources/images/pending.png");
+    private final String PENDING_IMG = "/images/pending.png";
     private JDA jda;
     private final Config config = new Config();
 
@@ -30,7 +33,9 @@ public class RegistrationMessage {
         this.jda = jda;
     }
 
+    @SneakyThrows
     public void freeAgent(Player player) {
+        @Cleanup InputStream inputStream = getClass().getResourceAsStream(PENDING_IMG);
         this.jda.getChannelById(TextChannel.class, config.getFaRegistrationChannel())
                 .sendMessageEmbeds(new EmbedBuilder()
                         .setThumbnail("attachment://pending.png")
@@ -45,10 +50,11 @@ public class RegistrationMessage {
                                 .addOption("Pro", "pro")
                                 .addOption("Intermediate", "im")
                                 .addOption("Open", "open").build()))
-                .addFiles(FileUpload.fromData(PENDING_IMG, "pending.png"))
-                .queue();
+                .addFiles(FileUpload.fromData(inputStream, "pending.png"))
+                .complete();
     }
 
+    @SneakyThrows
     public void leagueTeam(Team team, MessageEmbed.Field rolesField) {
         StringBuilder playersField = new StringBuilder();
         playersField.append("Captain: <@")
@@ -59,7 +65,7 @@ public class RegistrationMessage {
                     .append(player.discordId())
                     .append("> ");
         }
-
+        @Cleanup InputStream inputStream = getClass().getResourceAsStream(PENDING_IMG);
         this.jda.getChannelById(TextChannel.class, config.getTeamRegistrationChannel())
                 .sendMessageEmbeds(new EmbedBuilder()
                         .setTitle("Request for Team Creation")
@@ -77,10 +83,11 @@ public class RegistrationMessage {
                                 .addOption("Pro", "pro")
                                 .addOption("Intermediate", "im")
                                 .addOption("Open", "open").build()))
-                .addFiles(FileUpload.fromData(PENDING_IMG, "pending.png"))
-                .queue();
+                .addFiles(FileUpload.fromData(inputStream, "pending.png"))
+                .complete();
     }
 
+    @SneakyThrows
     public void disbandTeam(HashMap<String, String> team, User author, List<Player> players, boolean assignable, boolean deleteRole, boolean deleteChannels) {
         StringBuilder playersField = new StringBuilder();
         for (Player player: players) {
@@ -88,7 +95,7 @@ public class RegistrationMessage {
                     .append(player.discordId()).append(">")
                     .append(System.lineSeparator());
         }
-
+        @Cleanup InputStream inputStream = getClass().getResourceAsStream(PENDING_IMG);
         this.jda.getChannelById(TextChannel.class, config.getTeamRegistrationChannel())
                 .sendMessageEmbeds(new EmbedBuilder()
                         .setTitle("Team Disband Confirmation")
@@ -106,7 +113,7 @@ public class RegistrationMessage {
                         ActionRow.of(Button.danger("deny", "Deny").withEmoji(Emoji.fromUnicode("U+2716")),
                                         Button.success("approve", "Approve").withEmoji(Emoji.fromUnicode("U+2705")))
                 )
-                .addFiles(FileUpload.fromData(PENDING_IMG, "pending.png"))
-                .queue();
+                .addFiles(FileUpload.fromData(inputStream, "pending.png"))
+                .complete();
     }
 }

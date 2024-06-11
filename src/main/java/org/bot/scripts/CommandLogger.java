@@ -2,6 +2,7 @@ package org.bot.scripts;
 
 import lombok.Cleanup;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import org.bot.converters.Config;
 
 import java.time.OffsetDateTime;
 import java.util.Collection;
@@ -10,7 +11,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class CommandLogger {
-    private final String PATH = "src/main/resources/command-logs.txt";
+    private final String PATH = new Config().getCommandLogPath();
     private final char SEPARATOR = ',';
 
     public void recordNewRequest(long discordId, String requestType, long epochTime) {

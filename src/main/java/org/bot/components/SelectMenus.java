@@ -1,5 +1,7 @@
 package org.bot.components;
 
+import lombok.Cleanup;
+import lombok.SneakyThrows;
 import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.EmbedBuilder;
@@ -21,6 +23,7 @@ import org.bot.scripts.*;
 
 import java.awt.Color;
 import java.io.File;
+import java.io.InputStream;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -31,9 +34,10 @@ import java.util.concurrent.TimeUnit;
 
 @Slf4j
 public class SelectMenus extends ListenerAdapter {
-    private final File APPROVED_IMG = new File("src/main/resources/images/approve.png");
+    private final String APPROVED_IMG = "/images/approve.png";
 
     @Override
+    @SneakyThrows
     public void onStringSelectInteraction(StringSelectInteractionEvent event) {
         CommandLogger commandLogger = new CommandLogger();
         switch (Objects.requireNonNull(event.getSelectMenu().getId())){
@@ -81,6 +85,8 @@ public class SelectMenus extends ListenerAdapter {
                         event.getTimeCreated().toEpochSecond());
             }
             case "league-selector" -> {
+                @Cleanup InputStream inputStream = getClass().getResourceAsStream(APPROVED_IMG);
+
                 boolean isFreeAgentApproval = event.getMessage().getEmbeds().get(0).getTitle().contains("Free Agent");
 
                 event.editMessageEmbeds(new EmbedBuilder(event.getMessage().getEmbeds().get(0))
@@ -91,8 +97,8 @@ public class SelectMenus extends ListenerAdapter {
                                         + " at <t:" + Instant.now().getEpochSecond() + ":f>", false)
                         .build())
                         .setComponents()
-                        .setFiles(FileUpload.fromData(APPROVED_IMG, "approved.png"))
-                        .queue();
+                        .setFiles(FileUpload.fromData(inputStream, "approved.png"))
+                        .complete();
 
                 Registration registration = new Registration(event.getGuild());
 

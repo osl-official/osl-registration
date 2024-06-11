@@ -1,5 +1,7 @@
 package org.bot.commands.slash;
 
+import lombok.Cleanup;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Message;
@@ -20,7 +22,6 @@ import org.bot.scripts.RegistrationMessage;
 import org.bot.scripts.ReplyEphemeral;
 import org.bot.scripts.Roles;
 
-import java.awt.*;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
@@ -178,12 +179,15 @@ public class LeagueRegistration {
         return stringBuilder.toString();
     }
 
+    @SneakyThrows
     public void teamTemplateEvent() {
         JsonConverter jsonConverter = new JsonConverter();
+        String path = "/images/json-icon.png";
 
+        @Cleanup InputStream inputStream = getClass().getResourceAsStream(path);
 
         EmbedBuilder builder = new EmbedBuilder();
-        File file = new File("src/main/resources/images/json-icon.png");
+
         builder.setTitle("Team Template JSON")
                 .setThumbnail("attachment://json-icon.png")
                 .setColor(9926568)
@@ -192,9 +196,10 @@ public class LeagueRegistration {
                 .setFooter("If you have any questions or issues feel free to reach out to a League Coordinator",
                         event.getGuild().getIconUrl());
 
+        assert inputStream != null;
         event.replyEmbeds(builder.build())
                 .addFiles(jsonConverter.generateTemplateJson(),
-                        FileUpload.fromData(file, "json-icon.png")).queue();
+                        FileUpload.fromData(inputStream, "json-icon.png")).complete();
     }
 
     public void teamTemplateUploadEvent() {

@@ -1,5 +1,7 @@
 package org.bot.components;
 
+import lombok.Cleanup;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.MessageEmbed;
@@ -12,21 +14,24 @@ import org.bot.scripts.*;
 
 import java.awt.*;
 import java.io.File;
+import java.io.InputStream;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.util.Objects;
 
 @Slf4j
 public class Buttons extends ListenerAdapter {
-    private final File APPROVED_IMG = new File("src/main/resources/images/approve.png");
-    private final File DENIED_IMG = new File("src/main/resources/images/denied.png");
+    private final String APPROVED_IMG = "/images/approve.png";
+    private final String DENIED_IMG = "src/main/resources/images/denied.png";
 
     @Override
+    @SneakyThrows
     public void onButtonInteraction(ButtonInteractionEvent event) {
         MessageEmbed messageEmbed = event.getMessage().getEmbeds().get(0);
 
         switch (Objects.requireNonNull(event.getButton().getId())) {
             case "deny" -> {
+                @Cleanup InputStream inputStream = getClass().getResourceAsStream(DENIED_IMG);
                 CommandLogger commandLogger = new CommandLogger();
                 event.getMessage().editMessageEmbeds(new EmbedBuilder(messageEmbed)
                                 .setThumbnail("attachment://denied.png")
@@ -35,8 +40,8 @@ public class Buttons extends ListenerAdapter {
                                         + " at <t:" + Instant.now().getEpochSecond() + ":f>", false)
                                 .build())
                         .setComponents()
-                        .setFiles(FileUpload.fromData(DENIED_IMG, "denied.png"))
-                        .queue();
+                        .setFiles(FileUpload.fromData(inputStream, "denied.png"))
+                        .complete();
                 if (event.getMessage().getEmbeds().get(0).getTitle().contains("Free Agent")) {
                     commandLogger.removeRequest(event.getUser().getId(), "free-agent");
                 } else {
@@ -44,6 +49,7 @@ public class Buttons extends ListenerAdapter {
                 }
             }
             case "approve" -> {
+                @Cleanup InputStream inputStream = getClass().getResourceAsStream(APPROVED_IMG);
                 event.getMessage().editMessageEmbeds(new EmbedBuilder(messageEmbed)
                                 .setColor(Color.GREEN)
                                 .setThumbnail("attachment://approved.png")
@@ -51,8 +57,8 @@ public class Buttons extends ListenerAdapter {
                                         + " at <t:" + Instant.now().getEpochSecond() + ":f>", false)
                                 .build())
                         .setComponents()
-                        .setFiles(FileUpload.fromData(APPROVED_IMG, "approved.png"))
-                        .queue();
+                        .setFiles(FileUpload.fromData(inputStream, "approved.png"))
+                        .complete();
 
                 if (Objects.requireNonNull(messageEmbed.getTitle()).contains("Disband")) {
                     String teamID = messageEmbed.getFields().get(0).getValue();
