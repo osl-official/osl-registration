@@ -1,7 +1,14 @@
 ---
-token: ""
-
 # Registration Confirmation Channels
-fa-registration:
-team-registration:
-roster-channel:
+fa-registration: 1126078705396101161
+team-registration: 1126078735616065596
+roster-channel: 1175282007736070204
+
+command-log-path: "C:/Users/benbi/IdeaProjects/Osl-Registration/command-logs.txt"
+database-path: "C:/Users/benbi/IdeaProjects/Osl-Registration/teams.db"
+
+season:
+ number: 18
+ dates:
+  start: '2023-12-20'
+  end: '2025-12-27'
