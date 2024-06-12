@@ -22,7 +22,7 @@ import java.util.Objects;
 @Slf4j
 public class Buttons extends ListenerAdapter {
     private final String APPROVED_IMG = "/images/approve.png";
-    private final String DENIED_IMG = "src/main/resources/images/denied.png";
+    private final String DENIED_IMG = "/images/denied.png";
 
     @Override
     @SneakyThrows
