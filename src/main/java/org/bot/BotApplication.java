@@ -12,44 +12,54 @@ import org.bot.commands.slash.CommandInitializer;
 import org.bot.components.Buttons;
 import org.bot.components.Modals;
 import org.bot.components.SelectMenus;
-import org.bot.converters.Config;
+import org.bot.converters.AppConfig;
+import org.bot.models.Setting;
 import org.bot.scripts.MessageListener;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
 @Slf4j
-public class Main {
-    private static Config config = new Config();
+@SpringBootApplication
+public class BotApplication {
     private static JDA jda;
+    @Value(value = "discordToken")
+    private static String DISCORD_TOKEN;
 
-    public static void main(String[] args) {
+    @Autowired
+    public BotApplication(Setting setting) {
         try {
-            jda = JDABuilder.createDefault(args[0])
-                    .enableIntents(GatewayIntent.MESSAGE_CONTENT) // enables explicit access to message.getContentDisplay()
+            jda = JDABuilder.createDefault("MTAyMTA3MjQwODA2MjQ3NjM2MA.GLiVd2.Fc9PSl1ALlW7YvqJxeguW3Nn48YZVvKWTYM-WI")
                     .enableIntents(GatewayIntent.GUILD_MEMBERS)
                     .setChunkingFilter(ChunkingFilter.ALL)
                     .setMemberCachePolicy(MemberCachePolicy.ALL)
-                    // Event listeners to be added
                     .addEventListeners(
-                            new CommandInitializer(),
-                            new SelectMenus(),
-                            new Buttons(),
-                            new Modals(),
+                            new CommandInitializer(setting),
+                            new SelectMenus(setting),
+                            new Buttons(setting),
+                            new Modals(setting),
                             new MessageListener())
                     .build();
 
             jda.awaitReady();
-
-            // Sets status and activity
             jda.getPresence().setStatus(OnlineStatus.ONLINE);
             jda.getPresence().setActivity(Activity.playing("Slapshot: Rebound"));
 
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 log.info("Cleaning up...");
-                jda.shutdownNow(); // Shutdown the JDA instance
+                jda.shutdownNow();
             }));
 
         } catch (InterruptedException e) {
             jda.shutdownNow();
             throw new RuntimeException(e);
         }
+    }
+
+    public static void main(String[] args) {
+        SpringApplication.run(BotApplication.class, args);
     }
 }

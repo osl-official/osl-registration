@@ -3,24 +3,30 @@ package org.bot.scripts;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
-import org.bot.converters.Config;
-import org.bot.converters.Database;
 import org.bot.enums.League;
-import org.bot.models.Player;
-import org.bot.models.Team;
+import org.bot.models.Setting;
+import org.bot.models.entity.Team;
+import org.bot.models.entity.TeamPlayer;
+import org.bot.service.FreeAgentService;
 
 import java.awt.*;
-import java.nio.channels.Channel;
-import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 
 public class Roster {
-    private final Config CONFIG = new Config();
-    private Guild guild;
-    public Roster(Guild guild) {
+    private final Setting setting;
+    private final Guild guild;
+
+    public Roster(Setting setting, Guild guild) {
+        this.setting = setting;
         this.guild = guild;
-        TextChannel channel = guild.getTextChannelById(CONFIG.getRosterChannel());
+        initialize();
+    }
+
+    public void initialize() {
+        TextChannel channel = guild.getTextChannelById(setting.getRosterChannel());
+        assert channel != null;
         MessageHistory messageHistory = MessageHistory.getHistoryFromBeginning(channel).complete();
 
         if (messageHistory.getRetrievedHistory().isEmpty()) {
@@ -29,7 +35,7 @@ public class Roster {
     }
 
     public void addToRoster(long discordId, League league) {
-        TextChannel channel = guild.getTextChannelById(CONFIG.getRosterChannel());
+        TextChannel channel = guild.getTextChannelById(setting.getRosterChannel());
         assert channel != null;
         MessageHistory messageHistory = MessageHistory.getHistoryFromBeginning(channel).complete();
 
@@ -69,8 +75,8 @@ public class Roster {
         }
     }
 
-    public void addToRoster(Team team) {
-        TextChannel channel = guild.getTextChannelById(CONFIG.getRosterChannel());
+    public void addToRoster(Team team, List<TeamPlayer> players) {
+        TextChannel channel = guild.getTextChannelById(setting.getRosterChannel());
         MessageHistory messageHistory = MessageHistory.getHistoryFromBeginning(channel).complete();
 
         for (Message message : messageHistory.getRetrievedHistory()) {
@@ -81,23 +87,23 @@ public class Roster {
                         .setDescription(messageEmbed.getDescription())
                         .setColor(messageEmbed.getColor());
 
-                switch (team.league()) {
+                switch (team.getLeague()) {
                     case PRO -> {
                         builder.addField(messageEmbed.getFields().stream()
                                 .filter(field -> field.getName().equalsIgnoreCase(League.OPEN.label)).findFirst().get());
                         builder.addField(messageEmbed.getFields().stream()
                                 .filter(field -> field.getName().equalsIgnoreCase(League.INTERMEDIATE.label)).findFirst().get());
-                        builder.addField(getTeamsField(team, messageEmbed));
+                        builder.addField(getTeamsField(team, players, messageEmbed));
                     }
                     case INTERMEDIATE -> {
                         builder.addField(messageEmbed.getFields().stream()
                                 .filter(field -> field.getName().equalsIgnoreCase(League.OPEN.label)).findFirst().get());
-                        builder.addField(getTeamsField(team, messageEmbed));
+                        builder.addField(getTeamsField(team, players, messageEmbed));
                         builder.addField(messageEmbed.getFields().stream()
                                 .filter(field -> field.getName().equalsIgnoreCase(League.PRO.label)).findFirst().get());
                     }
                     case OPEN -> {
-                        builder.addField(getTeamsField(team, messageEmbed));
+                        builder.addField(getTeamsField(team, players, messageEmbed));
                         builder.addField(messageEmbed.getFields().stream()
                                 .filter(field -> field.getName().equalsIgnoreCase(League.INTERMEDIATE.label)).findFirst().get());
                         builder.addField(messageEmbed.getFields().stream()
@@ -110,7 +116,7 @@ public class Roster {
     }
 
     public void removeFromRoster(long discordId) {
-        TextChannel channel = guild.getTextChannelById(CONFIG.getRosterChannel());
+        TextChannel channel = guild.getTextChannelById(setting.getRosterChannel());
         assert channel != null;
         MessageHistory messageHistory = MessageHistory.getHistoryFromBeginning(channel).complete();
 
@@ -133,7 +139,7 @@ public class Roster {
     }
 
     public void removeFromRoster(Role teamRole) {
-        TextChannel channel = guild.getTextChannelById(CONFIG.getRosterChannel());
+        TextChannel channel = guild.getTextChannelById(setting.getRosterChannel());
         MessageHistory messageHistory = MessageHistory.getHistoryFromBeginning(channel).complete();
 
         for (Message message : messageHistory.getRetrievedHistory()) {
@@ -177,11 +183,12 @@ public class Roster {
         return null;
     }
 
-    private MessageEmbed.Field getTeamsField(Team team, MessageEmbed messageEmbed) {
-        Role role = new Roles(guild).getRole(team.name());
+    private MessageEmbed.Field getTeamsField(Team team, List<TeamPlayer> playerList, MessageEmbed messageEmbed) {
+        Role role = new Roles(guild).getRole(team.getTeamName());
+        TeamPlayer captain = playerList.stream().filter(TeamPlayer::isCaptain).findFirst().get();
 
         for (MessageEmbed.Field field : messageEmbed.getFields()) {
-            if (field.getName().equalsIgnoreCase(team.league().label)) {
+            if (field.getName().equalsIgnoreCase(team.getLeague().label)) {
                 StringBuilder sb = new StringBuilder();
 
                 if (!field.getValue().isBlank()) {
@@ -192,11 +199,11 @@ public class Roster {
                         .append(role.getAsMention()).append(System.lineSeparator())
                         .append("Captain: ")
                         .append("<@")
-                        .append(team.captain().discordId())
+                        .append(captain.getPlayer().getDiscordId())
                         .append(">").append(System.lineSeparator())
                         .append("Players: ");
-                for (Player player : team.players()) {
-                    sb.append("<@").append(player.discordId()).append("> ");
+                for (TeamPlayer player : playerList.stream().filter(p -> !p.isCaptain()).toList()) {
+                    sb.append("<@").append(player.getPlayer().getDiscordId()).append("> ");
                 }
 
                 return new MessageEmbed.Field(field.getName(), sb.toString(), true);
@@ -206,7 +213,7 @@ public class Roster {
     }
 
     public void refreshRoster() {
-        TextChannel channel = guild.getTextChannelById(CONFIG.getRosterChannel());
+        TextChannel channel = guild.getTextChannelById(setting.getRosterChannel());
         MessageHistory messageHistory = MessageHistory.getHistoryFromBeginning(channel).complete();
 
         // Clears Roster
@@ -229,14 +236,8 @@ public class Roster {
                 }
             });
         }
-        try {
-            Database database = new Database();
-            database.getFreeAgents().forEach(player -> addToRoster(player.discordId(), player.league()));
-            database.getTakenTeamModels().forEach(this::addToRoster);
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
-
+        FreeAgentService service = new FreeAgentService(setting);
+        service.findAll().forEach(p -> addToRoster(p.getPlayer().getDiscordId(), p.getLeague()));
     }
 
     private void initRoster() {
@@ -249,12 +250,12 @@ public class Roster {
                 .addField("Intermediate", "", true)
                 .addField("Open", "", true);
 
-        guild.getTextChannelById(CONFIG.getRosterChannel()).sendMessageEmbeds(embedBuilder.build()).queue();
+        guild.getTextChannelById(setting.getRosterChannel()).sendMessageEmbeds(embedBuilder.build()).queue();
 
         embedBuilder.setTitle("Free Agents")
                 .setDescription("A list of all free agents participating in the current season. " +
                         "If your team requires a free agent these are the players to speak to!");
 
-        guild.getTextChannelById(CONFIG.getRosterChannel()).sendMessageEmbeds(embedBuilder.build()).queue();
+        guild.getTextChannelById(setting.getRosterChannel()).sendMessageEmbeds(embedBuilder.build()).queue();
     }
 }

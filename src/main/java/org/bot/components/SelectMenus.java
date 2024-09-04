@@ -2,7 +2,6 @@ package org.bot.components;
 
 import lombok.Cleanup;
 import lombok.SneakyThrows;
-import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.MessageEmbed;
@@ -13,18 +12,24 @@ import net.dv8tion.jda.api.interactions.components.text.TextInput;
 import net.dv8tion.jda.api.interactions.components.text.TextInputStyle;
 import net.dv8tion.jda.api.interactions.modals.Modal;
 import net.dv8tion.jda.api.utils.FileUpload;
-import org.bot.converters.Config;
-import org.bot.converters.Database;
 import org.bot.converters.EmbedConverter;
 import org.bot.enums.League;
-import org.bot.models.Player;
-import org.bot.models.Team;
+import org.bot.enums.TableName;
+import org.bot.models.entity.FreeAgent;
+import org.bot.models.entity.Player;
+import org.bot.models.Setting;
+import org.bot.models.entity.Team;
+import org.bot.models.entity.TeamPlayer;
 import org.bot.scripts.*;
+import org.bot.service.FreeAgentService;
+import org.bot.service.PlayerService;
+import org.bot.service.TeamPlayerService;
+import org.bot.service.TeamService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import java.awt.Color;
-import java.io.File;
 import java.io.InputStream;
-import java.sql.SQLException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -33,13 +38,20 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
+@Component
 public class SelectMenus extends ListenerAdapter {
     private final String APPROVED_IMG = "/images/approve.png";
+    private final Setting setting;
+
+    @Autowired
+    public SelectMenus(Setting setting) {
+        this.setting = setting;
+    }
 
     @Override
     @SneakyThrows
     public void onStringSelectInteraction(StringSelectInteractionEvent event) {
-        CommandLogger commandLogger = new CommandLogger();
+        CommandLogger commandLogger = new CommandLogger(setting);
         switch (Objects.requireNonNull(event.getSelectMenu().getId())){
             case "choose-team" -> {
                 if (event.getSelectedOptions().get(0).getValue().equalsIgnoreCase("NEW")) {
@@ -67,9 +79,11 @@ public class SelectMenus extends ListenerAdapter {
                         .replaceAll("[<@>]", "")
                         .split(" ")).toList().forEach(idString -> players.add(new Player(Long.parseLong(idString))));
 
-                RegistrationMessage registrationMessage = new RegistrationMessage(event.getJDA());
-                registrationMessage.leagueTeam(new Team(captain, players, event.getSelectedOptions().get(0).getLabel(),
-                        event.getSelectedOptions().get(0).getValue().toUpperCase()),
+                RegistrationMessage registrationMessage = new RegistrationMessage(event.getJDA(), setting);
+                Team team = new Team();
+                team.setTeamName(event.getSelectedOptions().get(0).getLabel());
+                team.setTeamID(event.getSelectedOptions().get(0).getValue().toUpperCase());
+                registrationMessage.leagueTeam(team, captain.getDiscordId(), players,
                         roles.getTeamRoleField(event.getSelectedOptions().get(0).getLabel()));
 
                 event.editMessage("A request has been sent to the mod team. \n`This message will delete in 5 seconds.`")
@@ -100,7 +114,7 @@ public class SelectMenus extends ListenerAdapter {
                         .setFiles(FileUpload.fromData(inputStream, "approved.png"))
                         .complete();
 
-                Registration registration = new Registration(event.getGuild());
+                Registration registration = new Registration(setting, event.getGuild());
 
                 if (isFreeAgentApproval) {
                     String discordID = Objects.requireNonNull(event.getMessage().getEmbeds().get(0).getFields().stream()
@@ -112,14 +126,18 @@ public class SelectMenus extends ListenerAdapter {
                     commandLogger.removeRequest(event.getUser().getId(), "free-agent");
                 } else {
                     MessageEmbed messageEmbed = event.getMessage().getEmbeds().get(0);
+                    EmbedConverter embedConverter = new EmbedConverter(messageEmbed);
 
-                    registration.registerTeam(new EmbedConverter(messageEmbed).getTeamFromEmbed(),
-                            event.getSelectedOptions().get(0).getLabel());
+                    registration.registerTeam(embedConverter.getTeamFromEmbed(),
+                            embedConverter.getPlayersFromEmbed(), event.getSelectedOptions().get(0).getLabel());
+
                     commandLogger.removeRequest(event.getUser().getId(), "team");
                 }
             }
             case "table-names" -> {
-                DatabaseEmbed databaseEmbed = new DatabaseEmbed(event.getSelectedOptions().get(0).getLabel());
+                TableName tableName = TableName.valueOf(event.getSelectedOptions().get(0)
+                        .getLabel().toUpperCase().replace(" ", ""));
+                DatabaseEmbed databaseEmbed = new DatabaseEmbed(setting, tableName);
 
                 event.editMessageEmbeds(databaseEmbed.getDatabaseEmbed())
                         .setComponents(ActionRow.of(databaseEmbed.getTableSelectMenu()),
@@ -128,25 +146,45 @@ public class SelectMenus extends ListenerAdapter {
                         .submit();
             }
             case "delete-row" -> {
-                try {
-                    MessageEmbed messageEmbed = event.getMessage().getEmbeds().get(0);
+                MessageEmbed messageEmbed = event.getMessage().getEmbeds().get(0);
+                String tableNameStr = messageEmbed.getFields().get(0).getValue();
+                TableName tableName = TableName.valueOf(tableNameStr.replace(" ", "").toUpperCase());
+                int rowIndex = Integer.parseInt(event.getSelectedOptions().get(0).getValue());
 
-                    Database database = new Database();
-                    database.deleteRow(messageEmbed.getFields().get(0).getValue(),
-                            Integer.parseInt(event.getSelectedOptions().get(0).getValue()));
+                switch (tableName) {
+                    case TEAM -> {
+                        TeamService service = new TeamService(setting);
+                        Team team = service.findAll().get(rowIndex);
 
+                        service.remove(team);
+                    }
+                    case TEAMPLAYER -> {
+                        TeamPlayerService service = new TeamPlayerService(setting);
+                        TeamPlayer teamPlayer = service.findAll().get(rowIndex);
 
-                    DatabaseEmbed databaseEmbed = new DatabaseEmbed(messageEmbed.getFields().get(0).getValue(),
-                            Integer.parseInt(messageEmbed.getFields().get(1).getValue()));
+                        service.remove(teamPlayer);
+                    }
+                    case PLAYER -> {
+                        PlayerService service = new PlayerService(setting);
+                        Player player = service.findAll().get(rowIndex);
 
-                    event.editMessageEmbeds(databaseEmbed.getDatabaseEmbed())
-                            .setComponents(ActionRow.of(databaseEmbed.getTableSelectMenu()),
-                                    ActionRow.of(databaseEmbed.getDeleteSelectMenu()),
-                                    databaseEmbed.getPageButtons())
-                            .submit();
-                } catch (SQLException e) {
-                    log.error(e.getLocalizedMessage());
+                        service.remove(player);
+                    }
+                    case FREEAGENT -> {
+                        FreeAgentService service = new FreeAgentService(setting);
+                        FreeAgent freeAgent = service.findAll().get(rowIndex - 1);
+
+                        service.remove(freeAgent);
+                    }
                 }
+
+                DatabaseEmbed databaseEmbed = new DatabaseEmbed(setting, tableName, rowIndex);
+
+                event.editMessageEmbeds(databaseEmbed.getDatabaseEmbed())
+                        .setComponents(ActionRow.of(databaseEmbed.getTableSelectMenu()),
+                                ActionRow.of(databaseEmbed.getDeleteSelectMenu()),
+                                databaseEmbed.getPageButtons())
+                        .submit();
             }
             case "help-options" -> {
                 HelpEmbed helpEmbed = new HelpEmbed(Integer.parseInt(event.getSelectedOptions().get(0).getValue()));

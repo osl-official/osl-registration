@@ -12,37 +12,42 @@ import net.dv8tion.jda.api.interactions.components.ActionRow;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
 import net.dv8tion.jda.api.utils.FileUpload;
-import org.bot.converters.Config;
-import org.bot.models.Player;
-import org.bot.models.Team;
+import org.bot.models.entity.FreeAgent;
+import org.bot.models.Setting;
+import org.bot.models.entity.Player;
+import org.bot.models.entity.Team;
+import org.bot.models.entity.TeamPlayer;
+import org.bot.service.TeamPlayerService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import java.awt.*;
-import java.io.File;
 import java.io.InputStream;
 import java.time.Instant;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 
+@Component
 public class RegistrationMessage {
     private final String PENDING_IMG = "/images/pending.png";
     private JDA jda;
-    private final Config config = new Config();
+    private final Setting setting;
 
-    public RegistrationMessage(JDA jda) {
+    @Autowired
+    public RegistrationMessage(@Autowired(required = false) JDA jda, Setting setting) {
         this.jda = jda;
+        this.setting = setting;
     }
 
     @SneakyThrows
-    public void freeAgent(Player player) {
+    public void freeAgent(Player freeAgent) {
         @Cleanup InputStream inputStream = getClass().getResourceAsStream(PENDING_IMG);
-        this.jda.getChannelById(TextChannel.class, config.getFaRegistrationChannel())
+        this.jda.getChannelById(TextChannel.class, setting.getFaRegistration())
                 .sendMessageEmbeds(new EmbedBuilder()
                         .setThumbnail("attachment://pending.png")
                         .setTitle("Free Agent Request")
                         .setColor(Color.ORANGE)
-                        .setDescription(this.jda.getUserById(player.discordId()).getAsMention() + " has requested to be a Free Agent")
-                        .addField("Player", "DiscordID: " + player.discordId() + "\nSlapID: " + player.slapId().orElse(0), true)
+                        .setDescription(this.jda.getUserById(freeAgent.getDiscordId()).getAsMention() + " has requested to be a Free Agent")
+                        .addField("Player", "DiscordID: " + freeAgent.getDiscordId(), true)
                         .build())
                 .setComponents(
                         ActionRow.of(Button.danger("deny", "Deny").withEmoji(Emoji.fromUnicode("U+2716"))),
@@ -55,25 +60,25 @@ public class RegistrationMessage {
     }
 
     @SneakyThrows
-    public void leagueTeam(Team team, MessageEmbed.Field rolesField) {
+    public void leagueTeam(Team team, long captainId, List<Player> players, MessageEmbed.Field rolesField) {
         StringBuilder playersField = new StringBuilder();
         playersField.append("Captain: <@")
-                .append(team.captain().discordId())
+                .append(captainId)
                 .append(">\nPlayers: ");
-        for (Player player: team.players()) {
+        for (Player player: players) {
             playersField.append("<@")
-                    .append(player.discordId())
+                    .append(player.getDiscordId())
                     .append("> ");
         }
         @Cleanup InputStream inputStream = getClass().getResourceAsStream(PENDING_IMG);
-        this.jda.getChannelById(TextChannel.class, config.getTeamRegistrationChannel())
+        this.jda.getChannelById(TextChannel.class, setting.getTeamRegistration())
                 .sendMessageEmbeds(new EmbedBuilder()
                         .setTitle("Request for Team Creation")
                         .setThumbnail("attachment://pending.png")
                         .setColor(Color.ORANGE)
                         .addField("Team", playersField.toString(), true)
-                        .addField("Team Name", team.name(), true)
-                        .addField("Team ID", team.nameAbbr().toString(), true)
+                        .addField("Team Name", team.getTeamName(), true)
+                        .addField("Team ID", team.getTeamID(), true)
                         .addField(rolesField)
                         .addField("Requested Time","<t:" + Instant.now().getEpochSecond() + ":f>", false)
                         .build())
@@ -88,22 +93,22 @@ public class RegistrationMessage {
     }
 
     @SneakyThrows
-    public void disbandTeam(HashMap<String, String> team, User author, List<Player> players, boolean assignable, boolean deleteRole, boolean deleteChannels) {
+    public void disbandTeam(Team team, User author, List<TeamPlayer> teamPlayers, boolean assignable, boolean deleteRole, boolean deleteChannels) {
         StringBuilder playersField = new StringBuilder();
-        for (Player player: players) {
+        for (TeamPlayer player: teamPlayers) {
             playersField.append("<@")
-                    .append(player.discordId()).append(">")
+                    .append(player.getPlayer().getDiscordId()).append(">")
                     .append(System.lineSeparator());
         }
         @Cleanup InputStream inputStream = getClass().getResourceAsStream(PENDING_IMG);
-        this.jda.getChannelById(TextChannel.class, config.getTeamRegistrationChannel())
+        this.jda.getChannelById(TextChannel.class, setting.getTeamRegistration())
                 .sendMessageEmbeds(new EmbedBuilder()
                         .setTitle("Team Disband Confirmation")
                         .setThumbnail("attachment://pending.png")
                         .setDescription(author.getAsMention() + " has requested to disband **" +
-                                        team.get("teamName") + "**. This will kick all players from the team and make the team available for new team registration")
+                                        team.getTeamName() + "**. This will kick all players from the team and make the team available for new team registration")
                         .setColor(Color.ORANGE)
-                        .addField("Team ID", team.get("teamID").toUpperCase(), true)
+                        .addField("Team ID", team.getTeamID().toUpperCase(), true)
                         .addField("Players", playersField.toString(),true)
                         .addField("Assignable After Disband", String.valueOf(assignable), true)
                         .addField("Delete Role", String.valueOf(deleteRole), true)

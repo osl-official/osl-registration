@@ -9,12 +9,9 @@ public class PlayerDTO {
     @Setter
     private long discordId;
     @Setter
-    private int slapId;
-    @Setter
     private String league;
 
-    public PlayerDTO(long discordId, int slapId) {
-        this.slapId = slapId;
+    public PlayerDTO(long discordId) {
         this.discordId = discordId;
     }
 }
