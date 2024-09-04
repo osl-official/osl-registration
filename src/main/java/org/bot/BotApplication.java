@@ -32,7 +32,7 @@ public class BotApplication {
     @Autowired
     public BotApplication(Setting setting) {
         try {
-            jda = JDABuilder.createDefault("MTAyMTA3MjQwODA2MjQ3NjM2MA.GLiVd2.Fc9PSl1ALlW7YvqJxeguW3Nn48YZVvKWTYM-WI")
+            jda = JDABuilder.createDefault(DISCORD_TOKEN)
                     .enableIntents(GatewayIntent.GUILD_MEMBERS)
                     .setChunkingFilter(ChunkingFilter.ALL)
                     .setMemberCachePolicy(MemberCachePolicy.ALL)
