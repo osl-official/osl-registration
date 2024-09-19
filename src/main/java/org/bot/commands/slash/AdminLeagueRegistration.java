@@ -1,153 +1,157 @@
 package org.bot.commands.slash;
 
 import lombok.extern.slf4j.Slf4j;
-import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.components.ActionRow;
-import net.dv8tion.jda.api.interactions.components.selections.SelectMenu;
-import net.dv8tion.jda.api.interactions.components.selections.StringSelectMenu;
-import org.bot.converters.Config;
-import org.bot.converters.Database;
 import org.bot.converters.JsonConverter;
-import org.bot.models.Player;
+import org.bot.factories.RosterFactory;
+import org.bot.models.Setting;
+import org.bot.models.entity.Player;
+import org.bot.models.entity.Team;
+import org.bot.models.entity.TeamPlayer;
 import org.bot.scripts.*;
+import org.bot.service.FreeAgentService;
+import org.bot.service.TeamPlayerService;
+import org.bot.service.TeamService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
-import java.awt.*;
-import java.sql.SQLException;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
+@Service
 public class AdminLeagueRegistration {
-    private final Database database = new Database();
-    private final Config config = new Config();
+    private final Setting setting;
+    private final RosterFactory rosterFactory;
     private final ReplyEphemeral replyEphemeral;
     private final SlashCommandInteractionEvent event;
 
-    public AdminLeagueRegistration(SlashCommandInteractionEvent event) {
+    @Autowired
+    public AdminLeagueRegistration(Setting setting, @Autowired(required = false) SlashCommandInteractionEvent event) {
+        this.setting = setting;
         this.replyEphemeral = new ReplyEphemeral(event);
         this.event = event;
+        this.rosterFactory = new RosterFactory(setting);
     }
 
     public void removeFreeAgent() {
         User freeAgent = Objects.requireNonNull(event.getOption("freeagent")).getAsUser();
-        try {
-            if (!database.isFreeAgent(freeAgent.getIdLong())) {
-                replyEphemeral.sendThenDelete("User is not a Free Agent",
-                        10, TimeUnit.SECONDS);
-                return;
-            }
+        FreeAgentService service = new FreeAgentService(setting);
 
-            replyEphemeral.sendThenDelete(freeAgent.getAsMention() + " has been removed from the Free Agent list",
-                    5, TimeUnit.SECONDS);
-
-            Roles roles = new Roles(event.getGuild());
-            roles.removeRole(freeAgent, "Free Agent");
-
-            database.removeFreeAgent(freeAgent.getIdLong());
-            new Roster(Objects.requireNonNull(event.getGuild())).removeFromRoster(freeAgent.getIdLong());
-        } catch (SQLException e) {
-            log.error(e.getLocalizedMessage());
+        if (service.existsById(freeAgent.getIdLong())) {
+            replyEphemeral.sendThenDelete("User is not a Free Agent",
+                    10, TimeUnit.SECONDS);
+            return;
         }
+        service.removeById(freeAgent.getIdLong());
+        Roles roles = new Roles(event.getGuild());
+        roles.removeRole(freeAgent, "Free Agent");
+
+        replyEphemeral.sendThenDelete(freeAgent.getAsMention() + " has been removed from the Free Agent list",
+                5, TimeUnit.SECONDS);
+
+        Roster roster = rosterFactory.createRoster(event.getGuild());
+        roster.removeFromRoster(freeAgent.getIdLong());
     }
 
     public void addFreeAgent() {
-        User freeAgent = Objects.requireNonNull(event.getOption("freeagent")).getAsUser();
-        try {
-            if (freeAgent.isBot()) {
-                replyEphemeral.sendThenDelete("Bot cannot be registered as a Free Agent",
-                        10, TimeUnit.SECONDS);
-                return;
-            }
-            if (database.isFreeAgent(freeAgent.getIdLong())) {
-                replyEphemeral.sendThenDelete("User is not a Free Agent",
-                        10, TimeUnit.SECONDS);
-                return;
-            }
-            replyEphemeral.sendThenDelete("Refer to <#" + config.getFaRegistrationChannel() + "> for the next steps",
-                    5, TimeUnit.SECONDS);
+        FreeAgentService service = new FreeAgentService(setting);
 
-            RegistrationMessage registrationMessage = new RegistrationMessage(event.getJDA());
-            registrationMessage.freeAgent(new Player(freeAgent.getIdLong()));
-        } catch (SQLException e) {
-            log.error(e.getLocalizedMessage());
+        User freeAgent = Objects.requireNonNull(event.getOption("freeagent")).getAsUser();
+
+        if (freeAgent.isBot()) {
+            replyEphemeral.sendThenDelete("Bot cannot be registered as a Free Agent",
+                    10, TimeUnit.SECONDS);
+            return;
         }
+        if (service.existsById(freeAgent.getIdLong())) {
+            replyEphemeral.sendThenDelete("User is not a Free Agent",
+                    10, TimeUnit.SECONDS);
+            return;
+        }
+        replyEphemeral.sendThenDelete("Refer to <#" + setting.getFaRegistration() + "> for the next steps",
+                5, TimeUnit.SECONDS);
+
+        RegistrationMessage registrationMessage = new RegistrationMessage(event.getJDA(), setting);
+        registrationMessage.freeAgent(new Player(freeAgent.getIdLong()));
     }
 
     public void disbandTeam() {
+        TeamService teamService = new TeamService(setting);
+        TeamPlayerService teamPlayerService = new TeamPlayerService(setting);
+
         Role role = Objects.requireNonNull(event.getOption("teamrole")).getAsRole();
-        try {
-            List<HashMap<String, String>> teamsTaken = database.getTeamsTaken();
-            Optional<HashMap<String, String>> teamRole = teamsTaken.stream().filter(teamTaken -> teamTaken.containsValue(role.getName().split("\\|")[0].trim()))
-                    .findFirst();
-            HashMap<String, String> team = new HashMap<>();
-            for (HashMap<String, String> teamTaken: teamsTaken) {
-                if (teamTaken.containsValue(role.getName().split("\\|")[0].trim())) {
-                    team = teamTaken;
-                }
+        List<Team> teamsTaken = teamService.findAllByLeagueIsNotNull();
+
+        Team team = new Team();
+        for (Team teamTaken : teamsTaken) {
+            if (role.getName().contains(teamTaken.getTeamName())) {
+                team = teamTaken;
             }
-            if (teamRole.isEmpty()) {
-                replyEphemeral.sendThenDelete("Role either isn't linked to a Team or the Team has no players",
-                        10, TimeUnit.SECONDS);
-                return;
-            }
-
-            replyEphemeral.sendThenDelete("Please confirm action at <#" + config.getTeamRegistrationChannel() + ">",
-                    10, TimeUnit.SECONDS);
-
-            List<Player> players = database.getTeamPlayers(team.get("teamID"));
-            players.add(database.getCaptain(team.get("teamID")));
-
-            boolean assignable = Objects.requireNonNull(event.getOption("assignable")).getAsBoolean();
-            boolean deleteRole = event.getOption("delete-role") != null &&
-                    Objects.requireNonNull(event.getOption("delete-role")).getAsBoolean();
-            boolean deleteChannels = event.getOption("delete-channels") != null &&
-                    Objects.requireNonNull(event.getOption("delete-channels")).getAsBoolean();
-
-            new RegistrationMessage(event.getJDA()).disbandTeam(team, event.getUser(), players, assignable, deleteRole, deleteChannels);
-        } catch (SQLException e) {
-            log.error(e.getLocalizedMessage());
         }
+        if (team.getTeamID().isEmpty()) {
+            replyEphemeral.sendThenDelete("Role either isn't linked to a Team or the Team has no players",
+                    10, TimeUnit.SECONDS);
+            return;
+        }
+
+        replyEphemeral.sendThenDelete("Please confirm action at <#" + setting.getTeamRegistration() + ">",
+                10, TimeUnit.SECONDS);
+
+        List<TeamPlayer> players = teamPlayerService.findAllByTeamId(team.getTeamID()).get();
+
+        boolean assignable = Objects.requireNonNull(event.getOption("assignable")).getAsBoolean();
+        boolean deleteRole = event.getOption("delete-role") != null &&
+                Objects.requireNonNull(event.getOption("delete-role")).getAsBoolean();
+        boolean deleteChannels = event.getOption("delete-channels") != null &&
+                Objects.requireNonNull(event.getOption("delete-channels")).getAsBoolean();
+
+        new RegistrationMessage(event.getJDA(), setting).disbandTeam(team, event.getUser(), players, assignable, deleteRole, deleteChannels);
     }
 
     public void createTeam() {
+        TeamService service = new TeamService(setting);
+
         String teamName = Objects.requireNonNull(event.getOption("teamname")).getAsString();
         String teamID = Objects.requireNonNull(event.getOption("teamid")).getAsString();
 
-        try {
-            if (database.doesTeamIdExist(teamID)) {
+        for (Team team : service.findAll()) {
+            if (team.getTeamID().equalsIgnoreCase(teamID)) {
                 replyEphemeral.sendThenDelete("Team ID already exists. Please use another Team ID",
                         10, TimeUnit.SECONDS);
                 return;
             }
-            if (database.doesTeamNameExist(teamName)) {
+            if (team.getTeamName().equalsIgnoreCase(teamName)) {
                 replyEphemeral.sendThenDelete("Team Name already exists. Please use another Team Name",
                         10, TimeUnit.SECONDS);
                 return;
             }
-            database.addNewTeam(teamID, teamName);
-
-            replyEphemeral.sendThenDelete(teamName + " has been added",
-                    5, TimeUnit.SECONDS);
-        } catch (SQLException e) {
-            log.error(e.getLocalizedMessage());
         }
+
+        Team team = new Team();
+        team.setTeamName(teamName);
+        team.setTeamID(teamID);
+
+        service.save(team);
+
+        replyEphemeral.sendThenDelete(teamName + " has been added",
+                5, TimeUnit.SECONDS);
     }
 
     public void refreshRoster() {
-        Roster roster = new Roster(Objects.requireNonNull(event.getGuild()));
+
+        Roster roster = rosterFactory.createRoster(event.getGuild());
         roster.refreshRoster();
 
         replyEphemeral.sendThenDelete("Updating the roster now, this may take a minute", 10, TimeUnit.SECONDS);
     }
 
     public void faToJson() {
-        JsonConverter jsonConverter = new JsonConverter();
+        JsonConverter jsonConverter = new JsonConverter(setting);
 
         event.reply("All current free agents stored in the database.")
                 .setEphemeral(true)
@@ -156,7 +160,7 @@ public class AdminLeagueRegistration {
     }
 
     public void teamsToJson() {
-        JsonConverter jsonConverter = new JsonConverter();
+        JsonConverter jsonConverter = new JsonConverter(setting);
 
         event.reply("All current teams stored in the database.")
                 .setEphemeral(true)
@@ -165,7 +169,7 @@ public class AdminLeagueRegistration {
     }
 
     public void viewDatabase() {
-        DatabaseEmbed databaseEmbed = new DatabaseEmbed();
+        DatabaseEmbed databaseEmbed = new DatabaseEmbed(setting);
 
         event.replyEmbeds(databaseEmbed.getDatabaseEmbed())
                 .setEphemeral(true)

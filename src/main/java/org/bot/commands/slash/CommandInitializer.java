@@ -8,20 +8,22 @@ import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
-import net.dv8tion.jda.api.interactions.commands.build.OptionData;
-import org.bot.converters.Config;
-import org.bot.scripts.CommandLogger;
+import org.bot.models.Setting;
 import org.bot.scripts.ReplyEphemeral;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.IOException;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
 @Slf4j
 public class CommandInitializer extends ListenerAdapter {
     private static final int MESSAGE_TIMEOUT = 5;
     private static final int MILLISECOND_TO_SECOND = 1000;
+
+    private final Setting setting;
+
+    public CommandInitializer(Setting setting) {
+        this.setting = setting;
+    }
 
     @Override
     public void onGuildReady(GuildReadyEvent event) {
@@ -91,13 +93,8 @@ public class CommandInitializer extends ListenerAdapter {
     @Override
     public void onSlashCommandInteraction(@NotNull SlashCommandInteractionEvent event) {
         String name = event.getName();
-        Config config = new Config();
         long eventEpoch = event.getTimeCreated().toEpochSecond();
         ReplyEphemeral replyEphemeral = new ReplyEphemeral(event);
-
-        System.out.println("event time: "+ eventEpoch);
-        System.out.println("start: " + config.getStartDate().getTime() / MILLISECOND_TO_SECOND);
-        System.out.println("end: " + config.getEndDate().getTime() / MILLISECOND_TO_SECOND);
 
         //  Ensure you cant create and signup post season
 //        if (config.getStartDate().getTime() / MILLISECOND_TO_SECOND < eventEpoch && config.getEndDate().getTime() / MILLISECOND_TO_SECOND > eventEpoch) {
@@ -113,25 +110,25 @@ public class CommandInitializer extends ListenerAdapter {
 //            }
 //        }
         switch (name.toLowerCase()) {
-            case "register-fa" -> new LeagueRegistration(event).registerFreeAgentEvent();
-            case "register-team" -> new LeagueRegistration(event).registerTeamEvent();
-            case "register-team-upload" -> new LeagueRegistration(event).teamTemplateUploadEvent();
+            case "register-fa" -> new LeagueRegistration(setting, event).registerFreeAgentEvent();
+            case "register-team" -> new LeagueRegistration(setting, event).registerTeamEvent();
+            case "register-team-upload" -> new LeagueRegistration(setting, event).teamTemplateUploadEvent();
             case "help" -> new MiscCommands(event).help();
-            case "team-template" -> new LeagueRegistration(event).teamTemplateEvent();
+            case "team-template" -> new LeagueRegistration(setting, event).teamTemplateEvent();
             default -> {
                 if (!Objects.requireNonNull(Objects.requireNonNull(event.getGuild()).getMember(event.getUser()))
                         .hasPermission(Permission.ADMINISTRATOR)) {
                     return;
                 }
                 switch (name.toLowerCase()) {
-                    case "remove-fa" -> new AdminLeagueRegistration(event).removeFreeAgent();
-                    case "add-fa" -> new AdminLeagueRegistration(event).addFreeAgent();
-                    case "disband-team" -> new AdminLeagueRegistration(event).disbandTeam();
-                    case "create-team" -> new AdminLeagueRegistration(event).createTeam();
-                    case "refresh-roster" ->  new AdminLeagueRegistration(event).refreshRoster();
-                    case "teams-json" ->  new AdminLeagueRegistration(event).teamsToJson();
-                    case "free-agents-json" ->  new AdminLeagueRegistration(event).faToJson();
-                    case "view-database" ->  new AdminLeagueRegistration(event).viewDatabase();
+                    case "remove-fa" -> new AdminLeagueRegistration(setting, event).removeFreeAgent();
+                    case "add-fa" -> new AdminLeagueRegistration(setting, event).addFreeAgent();
+                    case "disband-team" -> new AdminLeagueRegistration(setting, event).disbandTeam();
+                    case "create-team" -> new AdminLeagueRegistration(setting, event).createTeam();
+                    case "refresh-roster" ->  new AdminLeagueRegistration(setting, event).refreshRoster();
+                    case "teams-json" ->  new AdminLeagueRegistration(setting, event).teamsToJson();
+                    case "free-agents-json" ->  new AdminLeagueRegistration(setting, event).faToJson();
+                    case "view-database" ->  new AdminLeagueRegistration(setting, event).viewDatabase();
                 }
             }
         }

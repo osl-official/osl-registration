@@ -14,60 +14,69 @@ import net.dv8tion.jda.api.interactions.components.text.TextInput;
 import net.dv8tion.jda.api.interactions.components.text.TextInputStyle;
 import net.dv8tion.jda.api.interactions.modals.Modal;
 import net.dv8tion.jda.api.utils.FileUpload;
-import org.bot.converters.Database;
 import org.bot.converters.JsonConverter;
-import org.bot.models.Team;
+import org.bot.models.Setting;
+import org.bot.models.entity.Player;
+import org.bot.models.entity.Team;
+import org.bot.models.entity.TeamPlayer;
 import org.bot.scripts.CommandLogger;
 import org.bot.scripts.RegistrationMessage;
 import org.bot.scripts.ReplyEphemeral;
 import org.bot.scripts.Roles;
+import org.bot.service.FreeAgentService;
+import org.bot.service.TeamPlayerService;
+import org.bot.service.TeamService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.sql.SQLException;
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
+@Component
 public class LeagueRegistration {
+    private final Setting setting;
     private final int MESSAGE_TIMEOUT = 10;
-    private final Database DATABASE = new Database();
-    private final CommandLogger COMMAND_LOGGER = new CommandLogger();
-    private ReplyEphemeral replyEphemeral;
-    private SlashCommandInteractionEvent event;
+    private final CommandLogger COMMAND_LOGGER;
+    private final ReplyEphemeral replyEphemeral;
+    private final SlashCommandInteractionEvent event;
 
-    public LeagueRegistration(SlashCommandInteractionEvent event) {
+    @Autowired
+    public LeagueRegistration(Setting setting, @Autowired(required = false) SlashCommandInteractionEvent event) {
+        this.setting = setting;
         this.replyEphemeral = new ReplyEphemeral(event);
         this.event = event;
+        this.COMMAND_LOGGER = new CommandLogger(setting);
     }
 
     public void registerFreeAgentEvent() {
-        try {
-            if (COMMAND_LOGGER.checkPendingRequest(event.getUser().getIdLong(), "free-agent")) {
-                replyEphemeral.sendThenDelete(
-                        "You already have a Free Agent request. Contact a **League Coordinator** if you believe this to be wrong",
-                        MESSAGE_TIMEOUT, TimeUnit.SECONDS
-                );
-                return;
-            }
-            if (DATABASE.isFreeAgent(event.getUser().getIdLong())) {
-                replyEphemeral.sendThenDelete(
-                        "You are already a Free Agent contact a **League Coordinator** if you believe this to be wrong",
-                        MESSAGE_TIMEOUT, TimeUnit.SECONDS
-                );
-                return;
-            }
-            if (DATABASE.isInTeam(event.getUser().getIdLong())) {
-                replyEphemeral.sendThenDelete(
-                        "You can't be a Free Agent while in a League Team, contact a **League Coordinator** if you believe this to be wrong",
-                        MESSAGE_TIMEOUT, TimeUnit.SECONDS
-                );
-                return;
-            }
-        } catch (SQLException e) {
-            log.error(e.getLocalizedMessage());
+        FreeAgentService freeAgentService = new FreeAgentService(setting);
+        TeamPlayerService teamPlayerService = new TeamPlayerService(setting);
+
+        if (COMMAND_LOGGER.checkPendingRequest(event.getUser().getIdLong(), "free-agent")) {
+            replyEphemeral.sendThenDelete(
+                    "You already have a Free Agent request. Contact a **League Coordinator** if you believe this to be wrong",
+                    MESSAGE_TIMEOUT, TimeUnit.SECONDS
+            );
+            return;
+        }
+        if (freeAgentService.existsById(event.getUser().getIdLong())) {
+            replyEphemeral.sendThenDelete(
+                    "You are already a Free Agent contact a **League Coordinator** if you believe this to be wrong",
+                    MESSAGE_TIMEOUT, TimeUnit.SECONDS
+            );
+            return;
+        }
+        if (teamPlayerService.findById(event.getUser().getIdLong()).isPresent()) {
+            replyEphemeral.sendThenDelete(
+                    "You can't be a Free Agent while in a League Team, contact a **League Coordinator** if you believe this to be wrong",
+                    MESSAGE_TIMEOUT, TimeUnit.SECONDS
+            );
+            return;
         }
 
         TextInput confirm = TextInput.create("confirm", "Confirmation", TextInputStyle.SHORT)
@@ -83,6 +92,10 @@ public class LeagueRegistration {
     }
 
     public void registerTeamEvent() {
+        FreeAgentService freeAgentService = new FreeAgentService(setting);
+        TeamPlayerService teamPlayerService = new TeamPlayerService(setting);
+        TeamService teamService = new TeamService(setting);
+
         List<OptionMapping> players = event.getOptionsByType(OptionType.USER);
         StringBuilder sb = new StringBuilder();
         if (COMMAND_LOGGER.checkPendingRequest(event.getUser().getIdLong(), "team")) {
@@ -93,16 +106,12 @@ public class LeagueRegistration {
             return;
         }
 
-        try {
-            if (DATABASE.isInTeam(event.getUser().getIdLong())) {
-                replyEphemeral.sendThenDelete(
-                        "You are already in a team.",
-                        MESSAGE_TIMEOUT, TimeUnit.SECONDS
-                );
-                return;
-            }
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+        if (teamPlayerService.findById(event.getUser().getIdLong()).isPresent()) {
+            replyEphemeral.sendThenDelete(
+                    "You are already in a team.",
+                    MESSAGE_TIMEOUT, TimeUnit.SECONDS
+            );
+            return;
         }
 
         for (OptionMapping player:players) {
@@ -128,12 +137,8 @@ public class LeagueRegistration {
                 return;
             }
 
-            try {
-                if (DATABASE.isInTeam(player.getAsUser().getIdLong())) {
-                    sb.append(player.getAsUser().getAsMention()).append(System.lineSeparator());
-                }
-            } catch (SQLException e) {
-                throw new RuntimeException(e);
+            if (teamPlayerService.findById(event.getUser().getIdLong()).isPresent()) {
+                sb.append(player.getAsUser().getAsMention()).append(System.lineSeparator());
             }
         }
 
@@ -143,27 +148,22 @@ public class LeagueRegistration {
             return;
         }
 
-        List<HashMap<String, String>> teams;
-        try {
-            teams = DATABASE.getTeamsNotTaken();
+        List<Team> teams = teamService.findAllByLeagueIsNull();
 
-            StringSelectMenu.Builder teamsSelectMenu = StringSelectMenu.create("choose-team")
-                    .addOption("Create New Team", "new");
+        StringSelectMenu.Builder teamsSelectMenu = StringSelectMenu.create("choose-team")
+                .addOption("Create New Team", "new");
 
-            for (HashMap<String, String> team: teams) {
-                teamsSelectMenu.addOption(team.get("teamName"), team.get("teamID").toLowerCase());
-            }
-
-            replyEphemeral.sendEmbedThenDelete(new EmbedBuilder()
-                            .setTitle("Select Team you wish to form")
-                            .addField("Team", getTeamsMessage(event.getUser(), event.getOptionsByType(OptionType.USER)), true)
-                            .setFooter("This message will be deleted after 5 minutes if there is no team selected.")
-                            .build(),
-                    5, TimeUnit.MINUTES, teamsSelectMenu.build()
-            );
-        } catch (SQLException e) {
-            log.error(e.getLocalizedMessage());
+        for (Team team: teams) {
+            teamsSelectMenu.addOption(team.getTeamName(), team.getTeamID().toLowerCase());
         }
+
+        replyEphemeral.sendEmbedThenDelete(new EmbedBuilder()
+                        .setTitle("Select Team you wish to form")
+                        .addField("Team", getTeamsMessage(event.getUser(), event.getOptionsByType(OptionType.USER)), true)
+                        .setFooter("This message will be deleted after 5 minutes if there is no team selected.")
+                        .build(),
+                5, TimeUnit.MINUTES, teamsSelectMenu.build()
+        );
     }
 
     private String getTeamsMessage(User captain, List<OptionMapping> players) {
@@ -181,7 +181,7 @@ public class LeagueRegistration {
 
     @SneakyThrows
     public void teamTemplateEvent() {
-        JsonConverter jsonConverter = new JsonConverter();
+        JsonConverter jsonConverter = new JsonConverter(setting);
         String path = "/images/json-icon.png";
 
         @Cleanup InputStream inputStream = getClass().getResourceAsStream(path);
@@ -229,10 +229,18 @@ public class LeagueRegistration {
                     textBuilder.append((char) c);
                 }
 
-                Team newTeam = new JsonConverter().jsonToTeam(textBuilder.toString());
+                Team newTeam = new JsonConverter(setting).jsonToTeam(textBuilder.toString());
+                List<TeamPlayer> newTeamPlayers = new JsonConverter(setting).jsonToPlayers(textBuilder.toString());
 
-                new RegistrationMessage(event.getJDA()).leagueTeam(newTeam,
-                    new Roles(event.getGuild()).getTeamRoleField(newTeam.name()));
+                TeamPlayer captain = newTeamPlayers.stream().filter(TeamPlayer::isCaptain).findFirst().get();
+                List<Player> newPlayers = new ArrayList<>();
+                newTeamPlayers.stream()
+                        .filter(p -> !p.isCaptain())
+                        .forEach(p -> newPlayers.add(p.getPlayer()));
+
+                new RegistrationMessage(event.getJDA(), setting).leagueTeam(newTeam, captain.getPlayer().getDiscordId(),
+                        newPlayers,
+                        new Roles(event.getGuild()).getTeamRoleField(newTeam.getTeamName()));
 
                 replyEphemeral.sendThenDelete("Valid JSON! Team registration now awaiting approval.", 10,
                         TimeUnit.SECONDS);

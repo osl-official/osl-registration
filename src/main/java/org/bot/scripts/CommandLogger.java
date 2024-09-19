@@ -1,22 +1,27 @@
 package org.bot.scripts;
 
 import lombok.Cleanup;
-import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
-import org.bot.converters.Config;
+import org.bot.models.Setting;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
-import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.io.*;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+@Component
 public class CommandLogger {
-    private final String PATH = new Config().getCommandLogPath();
+    private final Setting setting;
     private final char SEPARATOR = ',';
+
+    @Autowired
+    public CommandLogger(Setting setting) {
+        this.setting = setting;
+    }
 
     public void recordNewRequest(long discordId, String requestType, long epochTime) {
         try {
-            @Cleanup FileWriter fileWriter = new FileWriter(PATH, true);
+            @Cleanup FileWriter fileWriter = new FileWriter(setting.getCommandLogPath(), true);
 
             StringBuilder stringBuilder = new StringBuilder();
 
@@ -36,7 +41,7 @@ public class CommandLogger {
 
     public Collection<String> getCommandHistory() {
         try {
-            @Cleanup BufferedReader bufferedReader = new BufferedReader(new FileReader(PATH));
+            @Cleanup BufferedReader bufferedReader = new BufferedReader(new FileReader(setting.getCommandLogPath()));
             return bufferedReader.lines().collect(Collectors.toList());
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -53,7 +58,7 @@ public class CommandLogger {
         purgeLogs();
 
         try {
-            @Cleanup FileWriter fileWriter = new FileWriter(PATH, true);
+            @Cleanup FileWriter fileWriter = new FileWriter(setting.getCommandLogPath(), true);
 
             StringBuilder stringBuilder = new StringBuilder();
 
@@ -73,7 +78,7 @@ public class CommandLogger {
 
     public void purgeLogs() {
         try {
-            @Cleanup FileWriter fileWriter = new FileWriter(PATH, false);
+            @Cleanup FileWriter fileWriter = new FileWriter(setting.getCommandLogPath(), false);
 
             fileWriter.append("DiscordId, RequestType, EpochTime").append(System.lineSeparator());
 

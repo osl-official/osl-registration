@@ -1,5 +1,5 @@
 /target/
 /logsFile.log
-/src/main/resources/settings.yml
+/src/main/resources/application.properties
 command-logs.txt
 teams.db

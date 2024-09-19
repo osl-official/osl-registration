@@ -10,4 +10,4 @@ ENV token=${token}
 ENV version=${version}
 
 # Specify the command to run your Java application
-ENTRYPOINT java -jar /app/Osl-Registration-$version.jar $token
+ENTRYPOINT java -jar /app/Osl-Registration-${version}-jar-with-dependencies.jar $token
